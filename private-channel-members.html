@@ -490,13 +490,37 @@
       }
       .channels-head {
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: space-between;
         gap: 8px;
         padding: 10px 12px;
         border-bottom: 1px solid var(--line);
         color: var(--muted);
         font-size: 11px;
+      }
+      .channel-controls {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+      }
+      #channelTitle {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        color: var(--ink);
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .select-all {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 6px;
+        min-height: 30px;
+        white-space: nowrap;
       }
       .channel-filter {
         min-height: 30px;
@@ -1104,8 +1128,8 @@
       .work-grid {
         display: grid;
         grid-template-columns:
-          minmax(520px, 1.7fr)
-          minmax(250px, 0.82fr)
+          minmax(570px, 1.84fr)
+          minmax(200px, 0.68fr)
           minmax(310px, 1fr);
         gap: 10px;
         align-items: stretch;
@@ -1124,7 +1148,7 @@
         padding: 0 16px 14px;
       }
       #teamPanel .team-layout {
-        grid-template-columns: minmax(210px, 0.82fr) minmax(280px, 1.18fr);
+        grid-template-columns: minmax(280px, 1.18fr) minmax(210px, 0.82fr);
         height: 100%;
       }
       #teamPanel .panel-body,
@@ -1187,7 +1211,7 @@
       }
       @media (max-width: 1180px) {
         .work-grid {
-          grid-template-columns: minmax(500px, 1.55fr) minmax(280px, 0.85fr);
+          grid-template-columns: minmax(550px, 1.7fr) minmax(230px, 0.7fr);
         }
         .work-grid > .panel {
           height: auto;
@@ -1352,14 +1376,7 @@
                 </div>
                 <div>
                   <div class="channels-head">
-                    <div
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        min-width: 0;
-                      "
-                    >
+                    <div class="channel-controls">
                       <span id="channelTitle">Channels</span>
                       <select
                         id="channelFilter"
@@ -1584,6 +1601,12 @@
                 "'": "&#39;",
               })[c],
           );
+        const truncateText = (value, maxLength) => {
+          const text = String(value ?? "");
+          return text.length > maxLength
+            ? `${text.slice(0, maxLength)}...`
+            : text;
+        };
         const setBusy = (busy) => {
           state.busy = busy;
           byId("connectButton").disabled = busy;
@@ -1631,8 +1654,6 @@
         function toggleTeam(teamId, selected) {
           if (selected) {
             state.selectedTeams.add(teamId);
-            state.expandedChannels.add(`team-group|${teamId}`);
-            state.expandedChannels.add(`team-section|${teamId}`);
           }
           else {
             state.selectedTeams.delete(teamId);
@@ -1677,6 +1698,8 @@
           );
           const activeTeam = state.teams.find((team) => team.id === teamId);
           byId("channelTitle").textContent =
+            `${truncateText(activeTeam ? activeTeam.displayName : "Channels", 30)} (${visibleChannels.length})`;
+          byId("channelTitle").title =
             `${activeTeam ? activeTeam.displayName : "Channels"} (${visibleChannels.length})`;
           byId("channelList").innerHTML = visibleChannels.length
             ? visibleChannels
@@ -1704,8 +1727,6 @@
                 if (input.checked) {
                   state.selectedTeams.add(teamId);
                   state.selectedChannels.add(key);
-                  state.expandedChannels.add(`team-group|${teamId}`);
-                  state.expandedChannels.add(key);
                   renderTeams();
                 } else {
                   state.selectedChannels.delete(key);
@@ -1734,8 +1755,6 @@
           state.activeTeamId = teamId;
           if (selectTeam) {
             state.selectedTeams.add(teamId);
-            state.expandedChannels.add(`team-group|${teamId}`);
-            state.expandedChannels.add(`team-section|${teamId}`);
           }
           byId("channelFilter").value = "all";
           updateSummary();
@@ -2143,8 +2162,6 @@
               if (checked) {
                 state.selectedTeams.add(teamId);
                 state.selectedChannels.add(key);
-                state.expandedChannels.add(`team-group|${teamId}`);
-                state.expandedChannels.add(key);
               }
               else {
                 state.selectedChannels.delete(key);
