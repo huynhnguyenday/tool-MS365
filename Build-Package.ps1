@@ -1,7 +1,8 @@
 [CmdletBinding()]
-param([string]$OutputDirectory = (Join-Path $PSScriptRoot 'dist'))
+param([string]$OutputDirectory = '')
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) { $OutputDirectory = Join-Path $PSScriptRoot 'dist' }
 $version = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'VERSION') -Raw).Trim()
 $manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'UPDATE-MANIFEST.txt') | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') }
 $staging = Join-Path ([System.IO.Path]::GetTempPath()) ("teams-channel-package-" + [guid]::NewGuid().ToString('N'))

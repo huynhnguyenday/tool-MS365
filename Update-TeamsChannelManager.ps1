@@ -3,13 +3,15 @@ param(
     [switch]$CheckOnly,
     [switch]$Apply,
     [string]$Repository = 'huynhnguyenday/tool-MS365',
-    [string]$InstallDirectory = $PSScriptRoot,
+    [string]$InstallDirectory = '',
     [int]$ParentProcessId = 0,
     [int]$Port = 8765,
     [switch]$Restart
 )
 
 $ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+if ([string]::IsNullOrWhiteSpace($InstallDirectory)) { $InstallDirectory = $PSScriptRoot }
 
 function Get-InstalledVersion {
     $path = Join-Path $InstallDirectory 'VERSION'
