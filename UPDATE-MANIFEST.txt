@@ -1,0 +1,9 @@
+Add-PrivateChannelMembers.ps1
+Build-Package.ps1
+Open-PrivateChannelMembersUI.cmd
+README.md
+Start-PrivateChannelMembersUI.ps1
+UPDATE-MANIFEST.txt
+Update-TeamsChannelManager.ps1
+VERSION
+private-channel-members.html

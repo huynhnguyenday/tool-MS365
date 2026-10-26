@@ -1,0 +1,4 @@
+dist/
+.update-backup/
+*.tmp
+private-channel-results-*.csv

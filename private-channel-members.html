@@ -1,0 +1,2444 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Teams Channel Access</title>
+    <style>
+      :root {
+        --ink: #182322;
+        --muted: #657472;
+        --line: #dce5e1;
+        --canvas: #f4f7f4;
+        --paper: #ffffff;
+        --green: #146b57;
+        --green-dark: #0d5144;
+        --mint: #e4f3ec;
+        --gold: #f3c65c;
+        --coral: #c85138;
+        --red-bg: #fff0eb;
+        --shadow: 0 14px 36px rgba(30, 62, 52, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            ellipse at 8% 0%,
+            rgba(243, 198, 92, 0.22),
+            transparent 28rem
+          ),
+          linear-gradient(135deg, #f5f8f4 0%, #eef4f0 55%, #f8f6ef 100%);
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        min-height: 100vh;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+      .shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px 30px 48px;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        margin-bottom: 34px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        color: #fff;
+        background: var(--green);
+        font-size: 17px;
+      }
+      .brand small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+        margin-top: 3px;
+        letter-spacing: 0.04em;
+      }
+      .connection {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.76);
+        border-radius: 999px;
+        padding: 9px 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #aab7b3;
+      }
+      .connection.connected {
+        color: var(--green-dark);
+        border-color: #badbca;
+        background: var(--mint);
+      }
+      .connection.connected .dot {
+        background: #23976f;
+        box-shadow: 0 0 0 4px rgba(35, 151, 111, 0.13);
+      }
+      .heading {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+      .eyebrow {
+        color: var(--green);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        font-weight: 800;
+        margin-bottom: 9px;
+      }
+      h1 {
+        margin: 0;
+        font:
+          500 40px/1.08 Georgia,
+          "Times New Roman",
+          serif;
+        letter-spacing: 0;
+      }
+      .intro {
+        color: var(--muted);
+        margin: 11px 0 0;
+        max-width: 650px;
+        line-height: 1.55;
+        font-size: 14px;
+      }
+      .heading-note {
+        max-width: 250px;
+        padding: 11px 14px;
+        border-left: 3px solid var(--gold);
+        color: #5f6252;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 326px;
+        gap: 18px;
+        align-items: start;
+      }
+      .main-column {
+        display: grid;
+        gap: 16px;
+      }
+      .panel {
+        background: var(--paper);
+        border: 1px solid rgba(206, 220, 213, 0.9);
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+      }
+      .panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 14px;
+        padding: 20px 22px 14px;
+      }
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .step-number {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        color: var(--green-dark);
+        background: var(--mint);
+        font-size: 12px;
+        font-weight: 800;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: 700;
+      }
+      .step-sub {
+        margin: 5px 0 0 39px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .panel-body {
+        padding: 0 22px 21px;
+      }
+      .connect-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 15px;
+        background: #f7faf8;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+      }
+      .connect-icon {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        color: var(--green);
+        background: var(--mint);
+        font-weight: 800;
+      }
+      .connect-copy {
+        flex: 1;
+        min-width: 0;
+      }
+      .connect-copy strong {
+        display: block;
+        font-size: 13px;
+      }
+      .connect-copy span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .notification-center {
+        position: relative;
+      }
+      .update-button {
+        min-height: 38px;
+        padding: 7px 11px;
+        border: 1px solid #badbca;
+        border-radius: 8px;
+        color: var(--green-dark);
+        background: #f3faf6;
+        font-size: 11px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+      .update-button.available {
+        color: #7a4c00;
+        border-color: #e7c46c;
+        background: #fff8df;
+      }
+      .notification-button {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: var(--green-dark);
+        background: #fff;
+        font-size: 18px;
+      }
+      .notification-count {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--coral);
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 18px;
+      }
+      .notification-popover {
+        position: absolute;
+        z-index: 12;
+        top: calc(100% + 8px);
+        right: 0;
+        display: none;
+        width: min(380px, calc(100vw - 32px));
+        max-height: 420px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: 0 18px 45px rgba(24, 35, 34, 0.2);
+      }
+      .notification-popover.open { display: block; }
+      .notification-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .notification-list { max-height: 360px; overflow-y: auto; }
+      .notification-item {
+        padding: 10px 14px;
+        border-bottom: 1px solid #edf1ef;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      .notification-item.error { color: #8a3d2c; background: #fff8f5; }
+      .notification-item small { display: block; margin-top: 3px; color: var(--muted); }
+      .toast-stack {
+        position: fixed;
+        z-index: 40;
+        top: 14px;
+        right: 14px;
+        display: grid;
+        gap: 8px;
+        width: min(360px, calc(100vw - 28px));
+        pointer-events: none;
+      }
+      .toast {
+        padding: 11px 13px;
+        border: 1px solid #c8e3d4;
+        border-radius: 8px;
+        color: #285849;
+        background: #f0faf5;
+        box-shadow: 0 12px 30px rgba(24, 35, 34, 0.16);
+        font-size: 12px;
+        line-height: 1.4;
+        animation: toast-in 0.2s ease-out;
+      }
+      .toast.error { color: #813b2d; border-color: #efc9bd; background: #fff5f1; }
+      @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
+      .primary,
+      .secondary,
+      .quiet {
+        border: 0;
+        border-radius: 6px;
+        padding: 10px 15px;
+        font-size: 13px;
+        font-weight: 700;
+        transition:
+          background 0.15s,
+          transform 0.15s;
+      }
+      .primary {
+        color: #fff;
+        background: var(--green);
+      }
+      .primary:hover:not(:disabled) {
+        background: var(--green-dark);
+        transform: translateY(-1px);
+      }
+      .secondary {
+        color: var(--green-dark);
+        border: 1px solid #badbca;
+        background: #f3faf6;
+      }
+      .secondary:hover:not(:disabled) {
+        background: var(--mint);
+      }
+      .quiet {
+        color: var(--muted);
+        background: transparent;
+        padding-inline: 8px;
+      }
+      .quiet:hover {
+        color: var(--ink);
+        background: #f3f6f4;
+      }
+      .field-label {
+        display: block;
+        color: #475653;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 7px;
+      }
+      .input-wrap {
+        position: relative;
+      }
+      .text-input {
+        width: 100%;
+        min-height: 42px;
+        border: 1px solid #cfdcd6;
+        border-radius: 6px;
+        outline: none;
+        padding: 10px 12px;
+        color: var(--ink);
+        background: #fff;
+        font-size: 13px;
+      }
+      .text-input:focus {
+        border-color: var(--green);
+        box-shadow: 0 0 0 3px rgba(20, 107, 87, 0.12);
+      }
+      .search-icon {
+        position: absolute;
+        right: 12px;
+        top: 11px;
+        color: #7e8b86;
+        font-size: 16px;
+        pointer-events: none;
+      }
+      .team-layout {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.82fr) 1.18fr;
+        gap: 14px;
+      }
+      .list-box {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        overflow: hidden;
+        background: #fff;
+        min-height: 155px;
+      }
+      .list-scroll {
+        max-height: 240px;
+        overflow: auto;
+      }
+      .list-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 10px;
+        padding: 11px 12px;
+        color: var(--ink);
+        text-align: left;
+        border: 0;
+        border-bottom: 1px solid #edf1ef;
+        background: #fff;
+      }
+      .list-row:last-child {
+        border-bottom: 0;
+      }
+      .list-row:hover {
+        background: #f7faf8;
+      }
+      .list-row.selected {
+        background: #edf7f1;
+        box-shadow: inset 3px 0 var(--green);
+      }
+      .team-select-row {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr) 22px;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        border-bottom: 1px solid #edf1ef;
+        background: #fff;
+      }
+      .team-select-row.active { background: #edf7f1; box-shadow: inset 3px 0 var(--green); }
+      .team-select-row input { width: 16px; height: 16px; accent-color: var(--green); }
+      .team-open {
+        min-width: 0;
+        padding: 10px 0;
+        border: 0;
+        color: var(--ink);
+        background: transparent;
+        text-align: left;
+      }
+      .list-row .row-main {
+        min-width: 0;
+        flex: 1;
+      }
+      .row-main strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+      }
+      .row-main small {
+        display: block;
+        color: var(--muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 11px;
+        margin-top: 4px;
+      }
+      .arrow {
+        color: #8a9792;
+        font-size: 18px;
+      }
+      .channels-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .channel-filter {
+        min-height: 30px;
+        border: 1px solid #cfdcd6;
+        border-radius: 5px;
+        padding: 4px 24px 4px 8px;
+        color: var(--ink);
+        background: #fff;
+        font-size: 11px;
+      }
+      .channel-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #edf1ef;
+        font-size: 13px;
+      }
+      .channel-row:last-child {
+        border-bottom: 0;
+      }
+      .channel-row input,
+      .select-all input {
+        accent-color: var(--green);
+        width: 16px;
+        height: 16px;
+      }
+      .channel-row span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .channel-kind {
+        margin-left: auto;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 3px 7px;
+        color: #356657;
+        background: #e7f3ed;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+      .channel-kind.standard {
+        color: #68716e;
+        background: #edf0ee;
+      }
+      .channel-row:has(input:disabled) {
+        color: #7c8783;
+        background: #fafbfa;
+      }
+      .channel-row input:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+      .count {
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .user-input-area {
+        display: grid;
+        gap: 9px;
+      }
+      .suggestions {
+        position: absolute;
+        z-index: 4;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        max-height: 220px;
+        overflow: auto;
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        box-shadow: 0 12px 24px rgba(24, 35, 34, 0.13);
+      }
+      .suggestions:empty {
+        display: none;
+      }
+      .suggestion {
+        display: block;
+        width: 100%;
+        text-align: left;
+        border: 0;
+        background: #fff;
+        padding: 10px 12px;
+        border-bottom: 1px solid #edf1ef;
+      }
+      .suggestion:hover {
+        background: #f1f8f4;
+      }
+      .suggestion strong,
+      .suggestion small {
+        display: block;
+      }
+      .suggestion strong {
+        font-size: 13px;
+      }
+      .suggestion small {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 6px 8px 6px 10px;
+        border: 1px solid #c5dfd2;
+        border-radius: 999px;
+        background: #eff8f3;
+        color: #245a49;
+        font-size: 12px;
+      }
+      .chip span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chip button {
+        display: grid;
+        place-items: center;
+        border: 0;
+        border-radius: 50%;
+        width: 18px;
+        height: 18px;
+        color: #527364;
+        background: transparent;
+        font-weight: 700;
+      }
+      .chip button:hover {
+        background: #d8ece1;
+      }
+      .summary {
+        position: sticky;
+        top: 18px;
+        overflow: hidden;
+      }
+      .summary-top {
+        padding: 20px 20px 15px;
+        border-bottom: 1px solid var(--line);
+      }
+      .summary-kicker {
+        color: var(--green);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 800;
+        font-size: 10px;
+      }
+      .summary h2 {
+        margin-top: 8px;
+        font:
+          500 24px/1.1 Georgia,
+          "Times New Roman",
+          serif;
+      }
+      .summary-counts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9px;
+        margin-top: 16px;
+      }
+      .metric {
+        padding: 11px;
+        border-radius: 6px;
+        background: #f4f8f5;
+      }
+      .metric b {
+        display: block;
+        font:
+          500 24px/1 Georgia,
+          serif;
+      }
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        margin-top: 5px;
+      }
+      .summary-body {
+        padding: 16px 20px 20px;
+      }
+      .summary-label {
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 10px;
+        font-weight: 800;
+        margin: 0 0 9px;
+      }
+      .summary-list {
+        display: grid;
+        gap: 7px;
+        max-height: 150px;
+        overflow: auto;
+        margin-bottom: 18px;
+      }
+      .summary-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #41514d;
+        font-size: 12px;
+      }
+      .summary-item::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--gold);
+        flex: 0 0 auto;
+      }
+      .full-width {
+        width: 100%;
+        min-height: 43px;
+      }
+      .notice {
+        display: none;
+        margin-top: 14px;
+        padding: 11px 13px;
+        border-radius: 6px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .notice.show {
+        display: block;
+      }
+      .notice.info {
+        color: #345c50;
+        background: #edf7f1;
+        border: 1px solid #c8e3d4;
+      }
+      .notice.error {
+        color: #813b2d;
+        background: var(--red-bg);
+        border: 1px solid #efc9bd;
+      }
+      .results {
+        margin-top: 16px;
+        display: none;
+      }
+      .results.show {
+        display: block;
+      }
+      .assignment-table {
+        display: grid;
+        gap: 8px;
+        max-height: 430px;
+        overflow: auto;
+        padding-right: 3px;
+        margin-bottom: 16px;
+      }
+      .assignment-team {
+        overflow: hidden;
+        border: 1px solid #cbded5;
+        border-radius: 8px;
+        background: #f9fbfa;
+      }
+      .assignment-team-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 46px;
+        padding: 10px 12px;
+        border: 0;
+        color: #fff;
+        background: var(--green);
+        text-align: left;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .assignment-team-head:hover { background: var(--green-dark); }
+      .assignment-team-head .count { color: rgba(255, 255, 255, 0.82); }
+      .assignment-team-body { display: none; padding: 8px; }
+      .assignment-team.open .assignment-team-body { display: grid; gap: 7px; }
+      .assignment-channel {
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .assignment-channel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 11px;
+        border: 0;
+        color: var(--ink);
+        background: #eef6f2;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .assignment-channel-head:hover {
+        background: #edf7f1;
+      }
+      .assignment-channel-head span:first-child {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .assignment-channel-body {
+        display: none;
+        border-top: 1px solid var(--line);
+      }
+      .assignment-channel.open .assignment-channel-body {
+        display: block;
+      }
+      .assignment-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 112px;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 10px;
+        border-bottom: 1px solid #edf1ef;
+      }
+      .assignment-row:last-child {
+        border-bottom: 0;
+      }
+      .assignment-person {
+        min-width: 0;
+      }
+      .assignment-person strong,
+      .assignment-person small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .assignment-person strong {
+        font-size: 12px;
+      }
+      .assignment-person small {
+        color: var(--muted);
+        font-size: 10px;
+        margin-top: 3px;
+      }
+      .role-select {
+        width: 100%;
+        min-height: 33px;
+        border: 1px solid #cfdcd6;
+        border-radius: 5px;
+        padding: 5px 7px;
+        color: var(--ink);
+        background: #fff;
+        font-size: 11px;
+      }
+      .role-select:focus {
+        outline: 2px solid rgba(20, 107, 87, 0.22);
+        border-color: var(--green);
+      }
+      .role-badge {
+        border-radius: 999px;
+        padding: 3px 7px;
+        background: var(--mint);
+        color: var(--green-dark);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(18, 34, 30, 0.52);
+      }
+      .modal-backdrop.open {
+        display: flex;
+      }
+      .confirm-modal {
+        display: flex;
+        flex-direction: column;
+        width: min(500px, 100%);
+        height: min(520px, calc(100dvh - 36px));
+        max-height: 520px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        background: var(--paper);
+        box-shadow: 0 24px 80px rgba(10, 28, 23, 0.3);
+        overflow: hidden;
+      }
+      .modal-head {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .modal-head h2 {
+        font:
+          500 23px/1.12 Georgia,
+          "Times New Roman",
+          serif;
+      }
+      .modal-head p {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 7px 0 0;
+      }
+      .modal-close {
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        flex: 0 0 auto;
+        border: 0;
+        border-radius: 50%;
+        color: var(--muted);
+        background: #f1f5f2;
+        font-size: 20px;
+      }
+      .modal-close:hover {
+        color: var(--ink);
+        background: #e6eeea;
+      }
+      .modal-warning {
+        flex: 0 0 auto;
+        margin: 14px 20px 10px;
+        padding: 10px 12px;
+        border-left: 3px solid var(--gold);
+        background: #fff9e9;
+        color: #625635;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .modal-list-title {
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 22px 8px;
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 800;
+      }
+      .modal-user-list {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        margin: 0 20px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .modal-user-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 8px 10px;
+        border-bottom: 1px solid #edf1ef;
+      }
+      .modal-user-row:last-child {
+        border-bottom: 0;
+      }
+      .person-avatar {
+        display: grid;
+        place-items: center;
+        width: 29px;
+        height: 29px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        color: var(--green-dark);
+        background: var(--mint);
+        font-size: 11px;
+        font-weight: 800;
+      }
+      .modal-user-copy {
+        min-width: 0;
+      }
+      .modal-user-copy strong,
+      .modal-user-copy small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .modal-user-copy strong {
+        font-size: 12px;
+      }
+      .modal-user-copy small {
+        color: var(--muted);
+        font-size: 10px;
+        margin-top: 3px;
+      }
+      .modal-foot {
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: end;
+        gap: 8px;
+        padding: 14px 20px 18px;
+      }
+      .result-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px 12px;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+        font-size: 12px;
+      }
+      .result-row small {
+        grid-column: 1 / -1;
+        color: var(--muted);
+      }
+      .status {
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        background: #eef2f0;
+        color: #5e6a66;
+      }
+      .status.added {
+        color: #176448;
+        background: #e4f3ec;
+      }
+      .status.error,
+      .status.notinteam,
+      .status.teamadderr {
+        color: #9a422e;
+        background: #fff0eb;
+      }
+      .empty {
+        display: grid;
+        place-items: center;
+        min-height: 122px;
+        padding: 18px;
+        color: #889590;
+        text-align: center;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .loading {
+        color: var(--muted);
+        padding: 15px 12px;
+        font-size: 12px;
+      }
+      .footnote {
+        color: #71807a;
+        font-size: 11px;
+        line-height: 1.5;
+        margin-top: 17px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      /* Compact desktop workspace: all primary controls fit in one viewport. */
+      .shell {
+        width: 100%;
+        max-width: none;
+        padding: 12px 14px;
+      }
+      .workspace {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .connect-panel {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        align-items: center;
+      }
+      .connect-panel .panel-head {
+        padding: 12px 16px;
+      }
+      .connect-panel .panel-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        padding: 8px 10px 8px 0;
+      }
+      .connect-panel .connect-row {
+        min-height: 54px;
+        padding: 8px 10px;
+      }
+      .connect-panel .connect-icon {
+        width: 34px;
+        height: 34px;
+      }
+      .connect-panel .notice {
+        margin-top: 6px;
+        padding: 7px 10px;
+      }
+      .connection {
+        padding: 5px 9px;
+        font-size: 11px;
+      }
+      .work-grid {
+        display: grid;
+        grid-template-columns:
+          minmax(520px, 1.7fr)
+          minmax(250px, 0.82fr)
+          minmax(310px, 1fr);
+        gap: 10px;
+        align-items: stretch;
+      }
+      .work-grid > .panel {
+        height: calc(100dvh - 100px);
+        min-height: 540px;
+        overflow: hidden;
+      }
+      .work-grid .panel-head {
+        min-height: 58px;
+        align-items: center;
+        padding: 14px 16px 10px;
+      }
+      .work-grid .panel-body {
+        padding: 0 16px 14px;
+      }
+      #teamPanel .team-layout {
+        grid-template-columns: minmax(210px, 0.82fr) minmax(280px, 1.18fr);
+        height: 100%;
+      }
+      #teamPanel .panel-body,
+      #userPanel .panel-body {
+        height: calc(100% - 58px);
+        min-height: 0;
+      }
+      #teamPanel .team-layout > div {
+        display: flex;
+        min-height: 0;
+        flex-direction: column;
+      }
+      #teamPanel .list-box {
+        min-height: 0;
+        flex: 1;
+      }
+      #teamPanel .list-scroll {
+        height: 100%;
+        max-height: none;
+      }
+      #userPanel .user-input-area {
+        height: 100%;
+        grid-template-rows: max-content minmax(0, 1fr);
+      }
+      #userPanel .chips {
+        align-content: start;
+        max-height: none;
+        overflow-y: auto;
+      }
+      #userPanel .chip {
+        width: 100%;
+        justify-content: space-between;
+        border-radius: 7px;
+      }
+      .summary {
+        position: static;
+        display: flex;
+        flex-direction: column;
+      }
+      .summary-top {
+        padding: 14px 16px 12px;
+      }
+      .summary h2 {
+        margin-top: 4px;
+        font-size: 20px;
+      }
+      .summary-counts {
+        margin-top: 10px;
+      }
+      .summary-body {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 12px 16px 14px;
+      }
+      .assignment-table {
+        max-height: calc(100dvh - 330px);
+      }
+      .footnote {
+        margin-top: 12px;
+      }
+      @media (max-width: 1180px) {
+        .work-grid {
+          grid-template-columns: minmax(500px, 1.55fr) minmax(280px, 0.85fr);
+        }
+        .work-grid > .panel {
+          height: auto;
+          min-height: 0;
+        }
+        .work-grid .summary {
+          grid-column: 1 / -1;
+        }
+        #teamPanel .list-scroll,
+        #userPanel .chips,
+        .assignment-table {
+          max-height: 280px;
+        }
+        #teamPanel .panel-body,
+        #userPanel .panel-body,
+        #teamPanel .team-layout,
+        #userPanel .user-input-area {
+          height: auto;
+        }
+      }
+      @media (max-width: 900px) {
+        .work-grid {
+          grid-template-columns: 1fr;
+        }
+        .summary {
+          position: static;
+          grid-column: auto;
+        }
+        .summary-counts {
+          max-width: 360px;
+        }
+        .summary-list {
+          max-height: 96px;
+        }
+      }
+      @media (max-width: 620px) {
+        .shell {
+          padding: 16px 14px 32px;
+        }
+        .connect-panel {
+          display: block;
+        }
+        .connect-panel .panel-body {
+          padding: 0 15px 14px;
+        }
+        .panel-head {
+          padding: 17px 15px 12px;
+        }
+        .panel-body {
+          padding: 0 15px 16px;
+        }
+        .team-layout {
+          grid-template-columns: 1fr;
+        }
+        .list-scroll {
+          max-height: 185px;
+        }
+        .connect-row {
+          align-items: start;
+          flex-wrap: wrap;
+        }
+        .connect-copy {
+          min-width: calc(100% - 60px);
+        }
+        .connect-row .primary {
+          width: 100%;
+        }
+        .summary-top,
+        .summary-body {
+          padding-left: 15px;
+          padding-right: 15px;
+        }
+        .confirm-modal {
+          height: min(520px, calc(100dvh - 24px));
+        }
+        .modal-head {
+          padding: 17px 16px 12px;
+        }
+        .modal-warning {
+          margin-inline: 14px;
+        }
+        .modal-list-title {
+          padding-inline: 16px;
+        }
+        .modal-user-list {
+          margin-inline: 14px;
+        }
+        .modal-foot {
+          padding-inline: 14px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="workspace">
+          <section class="panel connect-panel" id="connectPanel">
+            <div class="panel-head">
+              <div>
+                <div class="step-title">
+                  <span class="step-number">01</span>
+                  <h2>Kết nối Microsoft 365</h2>
+                  <div id="connectionBadge" class="connection">
+                    <span class="dot"></span><span id="connectionText">Chưa kết nối</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="connect-row">
+                <div class="connect-icon">M</div>
+                <div class="connect-copy">
+                  <strong id="connectTitle">Chưa kết nối tài khoản</strong
+                  ><span id="connectDescription"
+                    >Kết nối để tải team và thành viên từ Microsoft Graph.</span
+                  >
+                </div>
+                <button id="connectButton" class="primary">
+                  Kết nối tài khoản
+                </button>
+                <button id="updateButton" class="update-button" type="button">Phiên bản…</button>
+                <div class="notification-center">
+                  <button id="notificationButton" class="notification-button" type="button" aria-label="Thông báo">🔔<span id="notificationCount" class="notification-count hidden">0</span></button>
+                  <div id="notificationPopover" class="notification-popover">
+                    <div class="notification-head"><span>Thông báo</span><button id="clearNotifications" class="quiet" type="button">Xóa</button></div>
+                    <div id="notificationList" class="notification-list"><div class="empty">Chưa có thông báo.</div></div>
+                  </div>
+                </div>
+              </div>
+              <div id="connectNotice" class="notice"></div>
+            </div>
+          </section>
+
+        <div class="work-grid">
+          <section class="panel" id="teamPanel">
+            <div class="panel-head">
+              <div>
+                <div class="step-title">
+                  <span class="step-number">02</span>
+                  <h2>Chọn team và kênh</h2>
+                </div>
+              </div>
+              <span id="teamCount" class="count"></span>
+            </div>
+            <div class="panel-body">
+              <div class="team-layout">
+                <div>
+                  <label class="field-label" for="teamSearch">Tìm team</label>
+                  <div class="input-wrap">
+                    <input
+                      id="teamSearch"
+                      class="text-input"
+                      placeholder="Tên team..."
+                      autocomplete="off"
+                    /><span class="search-icon">⌕</span>
+                  </div>
+                  <div class="list-box" style="margin-top: 9px">
+                    <div id="teamList" class="list-scroll">
+                      <div class="empty">Kết nối để tải danh sách team.</div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="channels-head">
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        min-width: 0;
+                      "
+                    >
+                      <span id="channelTitle">Channels</span>
+                      <select
+                        id="channelFilter"
+                        class="channel-filter"
+                        aria-label="Lọc loại channel"
+                        disabled
+                      >
+                        <option value="all">All</option>
+                        <option value="private">Private</option>
+                        <option value="standard">Standard</option>
+                      </select>
+                    </div>
+                    <label class="select-all"
+                      ><input id="selectAllChannels" type="checkbox" disabled />
+                      Chọn private</label
+                    >
+                  </div>
+                  <div
+                    class="list-box"
+                    style="border-top: 0; border-radius: 0 0 7px 7px"
+                  >
+                    <div id="channelList" class="list-scroll">
+                      <div class="empty">Chọn một team để xem các kênh.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="teamNotice" class="notice"></div>
+            </div>
+          </section>
+
+          <section class="panel" id="userPanel">
+            <div class="panel-head">
+              <div>
+                <div class="step-title">
+                  <span class="step-number">03</span>
+                  <h2>Chọn người dùng</h2>
+                </div>
+              </div>
+              <span id="userCount" class="count">0 đã chọn</span>
+            </div>
+            <div class="panel-body">
+              <div class="user-input-area">
+                <div class="input-wrap">
+                  <input
+                    id="userSearch"
+                    class="text-input"
+                    placeholder="Nhập tên hoặc email..."
+                    autocomplete="off"
+                    disabled
+                  />
+                  <span class="search-icon">⌕</span>
+                  <div id="userSuggestions" class="suggestions"></div>
+                </div>
+                <div id="selectedUsers" class="chips"></div>
+              </div>
+              <div id="userNotice" class="notice"></div>
+            </div>
+          </section>
+
+        <aside class="panel summary">
+          <div class="summary-top">
+            <div class="summary-kicker">Tóm tắt thao tác</div>
+            <h2>Sẵn sàng thêm</h2>
+            <div class="summary-counts">
+              <div class="metric">
+                <b id="selectedTeamCount">0</b><span>team đã chọn</span>
+              </div>
+              <div class="metric">
+                <b id="selectedChannelCount">0</b><span>kênh đã chọn</span>
+              </div>
+              <div class="metric">
+                <b id="selectedUserCount">0</b><span>người đã chọn</span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-body">
+            <p class="summary-label">Phân công theo Team / kênh · mặc định Member</p>
+            <div id="assignmentTable" class="assignment-table">
+              <div class="empty" style="min-height: 80px; padding: 0">
+                Chọn người dùng; private channel là tùy chọn.
+              </div>
+            </div>
+            <button id="addButton" class="primary full-width" disabled>
+              Thêm thành viên
+            </button>
+            <div id="addNotice" class="notice"></div>
+            <div id="results" class="results"></div>
+            <p class="footnote">
+              Người ngoài team cha chỉ được thêm sau xác nhận riêng. Kết quả
+              từng cặp Team/người/kênh sẽ hiện ở đây.
+            </p>
+          </div>
+        </aside>
+        </div>
+      </div>
+    </div>
+
+    <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+    <div id="teamConfirmModal" class="modal-backdrop" aria-hidden="true">
+      <section
+        class="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="teamConfirmTitle"
+      >
+        <header class="modal-head">
+          <div>
+            <h2 id="teamConfirmTitle">Xác nhận thêm thành viên</h2>
+            <p id="teamConfirmDescription">
+              Kiểm tra lại các phân công trước khi tiếp tục.
+            </p>
+          </div>
+          <button
+            id="teamModalClose"
+            class="modal-close"
+            type="button"
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </header>
+        <div id="teamConfirmWarning" class="modal-warning">
+          Thêm vào team cha sẽ cấp quyền rộng hơn việc chỉ tham gia private
+          channel. Nếu đồng ý, công cụ sẽ thêm họ vào team trước rồi tiếp tục
+          các phân công channel bên dưới.
+        </div>
+        <div class="modal-list-title">
+          <span id="teamModalListLabel">Người dùng cần thêm</span
+          ><span id="teamModalCount"></span>
+        </div>
+        <div id="teamMissingUsers" class="modal-user-list"></div>
+        <footer class="modal-foot">
+          <button id="teamModalCancel" class="secondary" type="button">
+            Hủy thao tác
+          </button>
+          <button id="teamModalAccept" class="primary" type="button">
+            Tiếp tục
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <script>
+      (() => {
+        const token = "__APP_TOKEN__";
+        const state = {
+          connected: false,
+          teams: [],
+          activeTeamId: "",
+          selectedTeams: new Set(),
+          channelsByTeam: new Map(),
+          selectedChannels: new Set(),
+          users: new Map(),
+          roles: new Map(),
+          expandedChannels: new Set(),
+          notifications: [],
+          unreadNotifications: 0,
+          busy: false,
+        };
+        const byId = (id) => document.getElementById(id);
+        const api = async (path, options = {}) => {
+          const response = await fetch(path, {
+            ...options,
+            headers: {
+              "X-Tool-Token": token,
+              ...(options.body ? { "Content-Type": "application/json" } : {}),
+              ...(options.headers || {}),
+            },
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok)
+            throw new Error(
+              payload.error || `Yêu cầu thất bại (${response.status})`,
+            );
+          return payload;
+        };
+        const renderNotifications = () => {
+          const count = byId("notificationCount");
+          count.textContent = state.unreadNotifications;
+          count.classList.toggle("hidden", state.unreadNotifications === 0);
+          byId("notificationList").innerHTML = state.notifications.length
+            ? state.notifications
+                .map(
+                  (item) => `<div class="notification-item ${item.type === "error" ? "error" : ""}">${escapeText(item.text)}<small>${escapeText(item.time)}</small></div>`,
+                )
+                .join("")
+            : '<div class="empty">Chưa có thông báo.</div>';
+        };
+        const notify = (text, type = "info") => {
+          if (!text) return;
+          state.notifications.unshift({
+            text,
+            type,
+            time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+          });
+          state.notifications = state.notifications.slice(0, 100);
+          state.unreadNotifications += 1;
+          renderNotifications();
+          const toast = document.createElement("div");
+          toast.className = `toast ${type === "error" ? "error" : ""}`;
+          toast.textContent = text;
+          byId("toastStack").appendChild(toast);
+          setTimeout(() => toast.remove(), 4200);
+        };
+        const setNotice = (id, text, type = "info") => {
+          const el = byId(id);
+          el.textContent = "";
+          el.className = "notice";
+          if (text) notify(text, type);
+        };
+        const escapeText = (value) =>
+          String(value ?? "").replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+        const setBusy = (busy) => {
+          state.busy = busy;
+          byId("connectButton").disabled = busy;
+          byId("addButton").disabled = busy || !canAdd();
+        };
+        const canAdd = () =>
+          state.connected &&
+          state.selectedTeams.size &&
+          [...state.selectedTeams].every((teamId) => state.channelsByTeam.has(teamId)) &&
+          state.users.size;
+        const channelKey = (teamId, channelId) => `${teamId}|${channelId}`;
+        const teamRoleKey = (teamId, userId) => `team|${teamId}|${userId}`;
+        const channelRoleKey = (teamId, channelId, userId) =>
+          `channel|${teamId}|${channelId}|${userId}`;
+
+        function renderTeams() {
+          const query = byId("teamSearch").value.trim().toLocaleLowerCase();
+          const teams = state.teams.filter((team) =>
+            team.displayName.toLocaleLowerCase().includes(query),
+          );
+          byId("teamCount").textContent = `${state.selectedTeams.size} đã chọn · ${teams.length} team`;
+          const list = byId("teamList");
+          if (!teams.length) {
+            list.innerHTML =
+              '<div class="empty">Không tìm thấy team phù hợp.</div>';
+            return;
+          }
+          list.innerHTML = teams
+            .map(
+              (team) =>
+                `<div class="team-select-row ${team.id === state.activeTeamId ? "active" : ""}"><input type="checkbox" data-team-check="${escapeText(team.id)}" ${state.selectedTeams.has(team.id) ? "checked" : ""} aria-label="Chọn ${escapeText(team.displayName)}"><button class="team-open" type="button" data-team-open="${escapeText(team.id)}"><span class="row-main"><strong>${escapeText(team.displayName)}</strong><small>${escapeText(team.description || team.id)}</small></span></button><span class="arrow">›</span></div>`,
+            )
+            .join("");
+          list.querySelectorAll("[data-team-open]").forEach((button) =>
+            button.addEventListener("click", () => chooseTeam(button.dataset.teamOpen, true)),
+          );
+          list.querySelectorAll("[data-team-check]").forEach((input) =>
+            input.addEventListener("change", () => {
+              toggleTeam(input.dataset.teamCheck, input.checked);
+              if (input.checked) chooseTeam(input.dataset.teamCheck, false);
+            }),
+          );
+        }
+
+        function toggleTeam(teamId, selected) {
+          if (selected) {
+            state.selectedTeams.add(teamId);
+            state.expandedChannels.add(`team-group|${teamId}`);
+            state.expandedChannels.add(`team-section|${teamId}`);
+          }
+          else {
+            state.selectedTeams.delete(teamId);
+            for (const key of [...state.selectedChannels]) {
+              if (key.startsWith(`${teamId}|`)) state.selectedChannels.delete(key);
+            }
+            for (const key of [...state.roles.keys()]) {
+              if (key.startsWith(`team|${teamId}|`) || key.startsWith(`channel|${teamId}|`)) state.roles.delete(key);
+            }
+          }
+          renderTeams();
+          renderChannels();
+          updateSummary();
+        }
+
+        async function loadTeams() {
+          byId("teamList").innerHTML =
+            '<div class="loading">Đang tải team...</div>';
+          const data = await api("/api/teams");
+          state.teams = data.teams || [];
+          byId("teamSearch").disabled = false;
+          renderTeams();
+        }
+
+        function renderChannels() {
+          const teamId = state.activeTeamId;
+          const channels = state.channelsByTeam.get(teamId) || [];
+          const filter = byId("channelFilter").value;
+          const visibleChannels = channels.filter((channel) => {
+            const type = String(
+              channel.membershipType || "standard",
+            ).toLowerCase();
+            return filter === "all" || type === filter;
+          });
+          const privateChannels = visibleChannels.filter(
+            (channel) =>
+              String(channel.membershipType || "standard").toLowerCase() ===
+              "private",
+          );
+          const selectedVisiblePrivate = privateChannels.filter((channel) =>
+            state.selectedChannels.has(channelKey(teamId, channel.id)),
+          );
+          const activeTeam = state.teams.find((team) => team.id === teamId);
+          byId("channelTitle").textContent =
+            `${activeTeam ? activeTeam.displayName : "Channels"} (${visibleChannels.length})`;
+          byId("channelList").innerHTML = visibleChannels.length
+            ? visibleChannels
+                .map((channel) => {
+                  const type = String(
+                    channel.membershipType || "standard",
+                  ).toLowerCase();
+                  const isPrivate = type === "private";
+                  const checked =
+                    isPrivate && state.selectedChannels.has(channelKey(teamId, channel.id));
+                  const typeLabel = isPrivate ? "Private" : "Standard";
+                  const explanation = isPrivate
+                    ? "Private channel"
+                    : "Standard channel inherits team membership; cannot be assigned separately";
+                  return `<label class="channel-row" title="${explanation}"><input type="checkbox" data-channel="${escapeText(channel.id)}" ${checked ? "checked" : ""} ${isPrivate ? "" : "disabled"}><span title="${escapeText(channel.displayName)}">${escapeText(channel.displayName)}</span><small class="channel-kind ${isPrivate ? "" : "standard"}">${typeLabel}</small></label>`;
+                })
+                .join("")
+            : '<div class="empty">Không có channel theo bộ lọc này.</div>';
+
+          byId("channelList")
+            .querySelectorAll("[data-channel]:not(:disabled)")
+            .forEach((input) =>
+              input.addEventListener("change", () => {
+                const key = channelKey(teamId, input.dataset.channel);
+                if (input.checked) {
+                  state.selectedTeams.add(teamId);
+                  state.selectedChannels.add(key);
+                  state.expandedChannels.add(`team-group|${teamId}`);
+                  state.expandedChannels.add(key);
+                  renderTeams();
+                } else {
+                  state.selectedChannels.delete(key);
+                  for (const key of state.roles.keys()) {
+                    if (key.startsWith(`channel|${teamId}|${input.dataset.channel}|`))
+                      state.roles.delete(key);
+                  }
+                  state.expandedChannels.delete(key);
+                }
+                renderChannels();
+                updateSummary();
+              }),
+            );
+
+          const selectAll = byId("selectAllChannels");
+          selectAll.disabled = privateChannels.length === 0;
+          selectAll.checked =
+            privateChannels.length > 0 &&
+            selectedVisiblePrivate.length === privateChannels.length;
+          selectAll.indeterminate =
+            selectedVisiblePrivate.length > 0 &&
+            selectedVisiblePrivate.length < privateChannels.length;
+        }
+
+        async function chooseTeam(teamId, selectTeam = true) {
+          state.activeTeamId = teamId;
+          if (selectTeam) {
+            state.selectedTeams.add(teamId);
+            state.expandedChannels.add(`team-group|${teamId}`);
+            state.expandedChannels.add(`team-section|${teamId}`);
+          }
+          byId("channelFilter").value = "all";
+          updateSummary();
+          renderTeams();
+          byId("channelTitle").textContent = "Đang tải private channel...";
+          byId("channelList").innerHTML =
+            '<div class="loading">Đang tải...</div>';
+          byId("selectAllChannels").disabled = true;
+          byId("userSearch").disabled = false;
+          setNotice("teamNotice", "");
+          if (state.channelsByTeam.has(teamId)) {
+            byId("channelFilter").disabled = false;
+            renderChannels();
+            return;
+          }
+          try {
+            const data = await api(
+              `/api/teams/${encodeURIComponent(teamId)}/channels`,
+            );
+            state.channelsByTeam.set(teamId, data.channels || []);
+            byId("channelFilter").disabled = false;
+            if (!(data.channels || []).length) {
+              byId("channelTitle").textContent = "Channels (0)";
+              byId("channelList").innerHTML =
+                '<div class="empty">Không tìm thấy channel mà tài khoản hiện tại có thể xem trong team này.</div>';
+            } else {
+              renderChannels();
+            }
+            updateSummary();
+          } catch (error) {
+            byId("channelTitle").textContent = "Channels";
+            byId("channelList").innerHTML =
+              '<div class="empty">Không tải được danh sách kênh.</div>';
+            setNotice("teamNotice", error.message, "error");
+          }
+        }
+
+        function renderUsers() {
+          const selected = [...state.users.values()];
+          byId("userCount").textContent = `${selected.length} đã chọn`;
+          byId("selectedUsers").innerHTML = selected
+            .map(
+              (user) =>
+                `<span class="chip"><span>${escapeText(user.displayName)} · ${escapeText(user.userPrincipalName || user.email)}</span><button type="button" aria-label="Bỏ ${escapeText(user.displayName)}" data-remove-user="${escapeText(user.id)}">×</button></span>`,
+            )
+            .join("");
+          byId("selectedUsers")
+            .querySelectorAll("[data-remove-user]")
+            .forEach((button) =>
+              button.addEventListener("click", () => {
+                for (const key of [...state.roles.keys()]) {
+                  if (key.endsWith(`|${button.dataset.removeUser}`)) state.roles.delete(key);
+                }
+                state.users.delete(button.dataset.removeUser);
+                renderUsers();
+                updateSummary();
+              }),
+            );
+        }
+
+        function updateSummary() {
+          const chosenUsers = [...state.users.values()];
+          const selectedTeamData = [...state.selectedTeams].map((teamId) => {
+            const team = state.teams.find((item) => item.id === teamId) || { id: teamId, displayName: teamId };
+            const channels = (state.channelsByTeam.get(teamId) || []).filter((channel) =>
+              state.selectedChannels.has(channelKey(teamId, channel.id)),
+            );
+            return { team, channels };
+          });
+          const chosenChannelCount = selectedTeamData.reduce((sum, item) => sum + item.channels.length, 0);
+          byId("selectedTeamCount").textContent = state.selectedTeams.size;
+          byId("selectedChannelCount").textContent = chosenChannelCount;
+          byId("selectedUserCount").textContent = chosenUsers.length;
+          const table = byId("assignmentTable");
+          if (!state.selectedTeams.size || !chosenUsers.length) {
+            table.innerHTML =
+              '<div class="empty" style="min-height:80px;padding:0">Chọn ít nhất một team và một người dùng.</div>';
+            byId("addButton").disabled = state.busy || !canAdd();
+            return;
+          }
+
+          table.innerHTML = selectedTeamData.map(({ team, channels }) => {
+            const teamGroupKey = `team-group|${team.id}`;
+            const teamOpen = state.expandedChannels.has(teamGroupKey);
+            const channelEntries = channels.length
+              ? channels.map((channel) => ({ channel, isTeamLevel: false }))
+              : [{ channel: { id: "__team__", displayName: "Team / Standard channels" }, isTeamLevel: true }];
+            const channelTables = channelEntries.map(({ channel, isTeamLevel }) => {
+              const sectionKey = isTeamLevel ? `team-section|${team.id}` : channelKey(team.id, channel.id);
+              const open = state.expandedChannels.has(sectionKey);
+              const ownerCount = chosenUsers.filter((user) => {
+                const key = isTeamLevel
+                  ? teamRoleKey(team.id, user.id)
+                  : channelRoleKey(team.id, channel.id, user.id);
+                return state.roles.get(key) === "owner";
+              }).length;
+              const rows = chosenUsers.map((user) => {
+                const roleKey = isTeamLevel
+                  ? teamRoleKey(team.id, user.id)
+                  : channelRoleKey(team.id, channel.id, user.id);
+                const role = state.roles.get(roleKey) || "member";
+                const attributes = isTeamLevel
+                  ? `data-team-role-team="${escapeText(team.id)}" data-team-role-user="${escapeText(user.id)}"`
+                  : `data-channel-role-team="${escapeText(team.id)}" data-channel-role-channel="${escapeText(channel.id)}" data-channel-role-user="${escapeText(user.id)}"`;
+                return `<div class="assignment-row"><div class="assignment-person"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email)}</small></div><select class="role-select" ${attributes}><option value="member" ${role === "member" ? "selected" : ""}>Member</option><option value="owner" ${role === "owner" ? "selected" : ""}>Owner</option></select></div>`;
+              }).join("");
+              return `<section class="assignment-channel ${open ? "open" : ""}"><button class="assignment-channel-head" type="button" data-toggle-section="${escapeText(sectionKey)}"><span>${escapeText(channel.displayName)}</span><span class="count">${chosenUsers.length} người · ${ownerCount} owner &nbsp; ${open ? "⌃" : "⌄"}</span></button><div class="assignment-channel-body">${rows}</div></section>`;
+            }).join("");
+            return `<section class="assignment-team ${teamOpen ? "open" : ""}"><button class="assignment-team-head" type="button" data-toggle-team-group="${escapeText(teamGroupKey)}"><span>${escapeText(team.displayName)}</span><span class="count">${channelEntries.length} mục · ${chosenUsers.length} người &nbsp; ${teamOpen ? "⌃" : "⌄"}</span></button><div class="assignment-team-body">${channelTables}</div></section>`;
+          }).join("");
+
+          table.querySelectorAll("[data-toggle-team-group]").forEach((button) =>
+            button.addEventListener("click", () => {
+              const key = button.dataset.toggleTeamGroup;
+              if (state.expandedChannels.has(key)) state.expandedChannels.delete(key);
+              else state.expandedChannels.add(key);
+              updateSummary();
+            }),
+          );
+
+          table.querySelectorAll("[data-toggle-section]").forEach((button) =>
+            button.addEventListener("click", () => {
+              const key = button.dataset.toggleSection;
+              if (state.expandedChannels.has(key)) state.expandedChannels.delete(key);
+              else state.expandedChannels.add(key);
+              updateSummary();
+            }),
+          );
+          table.querySelectorAll("[data-team-role-user]").forEach((select) =>
+            select.addEventListener("change", () => state.roles.set(teamRoleKey(select.dataset.teamRoleTeam, select.dataset.teamRoleUser), select.value)),
+          );
+          table.querySelectorAll("[data-channel-role-user]").forEach((select) =>
+            select.addEventListener("change", () => {
+              state.roles.set(channelRoleKey(select.dataset.channelRoleTeam, select.dataset.channelRoleChannel, select.dataset.channelRoleUser), select.value);
+              updateSummary();
+            }),
+          );
+          byId("addButton").disabled = state.busy || !canAdd();
+        }
+
+        async function searchUsers() {
+          const query = byId("userSearch").value.trim();
+          const box = byId("userSuggestions");
+          if (query.length < 2) {
+            box.innerHTML = "";
+            return;
+          }
+          box.innerHTML = '<div class="loading">Đang tìm người dùng...</div>';
+          try {
+            const data = await api(`/api/users?q=${encodeURIComponent(query)}`);
+            const users = (data.users || []).filter(
+              (user) => !state.users.has(user.id),
+            );
+            box.innerHTML = users.length
+              ? users
+                  .map(
+                    (user) =>
+                      `<button class="suggestion" type="button" data-user="${escapeText(user.id)}"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName)}${user.email && user.email !== user.userPrincipalName ? ` · ${escapeText(user.email)}` : ""}</small></button>`,
+                  )
+                  .join("")
+              : '<div class="empty">Không tìm thấy người phù hợp.</div>';
+            box.querySelectorAll("[data-user]").forEach((button) =>
+              button.addEventListener("click", () => {
+                const user = users.find(
+                  (item) => item.id === button.dataset.user,
+                );
+                if (user) state.users.set(user.id, user);
+                byId("userSearch").value = "";
+                box.innerHTML = "";
+                renderUsers();
+                updateSummary();
+              }),
+            );
+          } catch (error) {
+            box.innerHTML = `<div class="empty">${escapeText(error.message)}</div>`;
+          }
+        }
+
+        function renderResults(results) {
+          const container = byId("results");
+          container.className = "results show";
+          container.innerHTML =
+            '<p class="summary-label">Kết quả xử lý</p>' +
+            results
+              .map((result) => {
+                const statusClass =
+                  result.status === "Added" || result.status === "Updated"
+                    ? "added"
+                    : result.status === "Error" ||
+                        result.status === "NotInTeam" ||
+                        result.status === "TeamAddError"
+                      ? "error"
+                      : "";
+                return `<div class="result-row"><span>${escapeText(result.user)} <span style="color:#8a9792">→</span> ${escapeText(result.channel)}</span><span class="status ${statusClass}">${escapeText(result.status)}</span><small>${escapeText(result.detail)}</small></div>`;
+              })
+              .join("");
+        }
+
+        function askInAppModal({
+          title,
+          description,
+          warning,
+          listLabel,
+          items,
+          acceptText,
+          cancelText = "Hủy",
+        }) {
+          const modal = byId("teamConfirmModal");
+          const list = byId("teamMissingUsers");
+          byId("teamConfirmTitle").textContent = title;
+          byId("teamConfirmDescription").textContent = description;
+          byId("teamConfirmWarning").textContent = warning;
+          byId("teamModalListLabel").textContent = listLabel;
+          byId("teamModalCount").textContent = `${items.length} mục`;
+          byId("teamModalAccept").textContent = acceptText;
+          byId("teamModalCancel").textContent = cancelText;
+          list.innerHTML = items
+            .map((item) => {
+              const initials = String(item.title || "?")
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(-2)
+                .map((part) => part[0])
+                .join("")
+                .toUpperCase();
+              return `<div class="modal-user-row"><span class="person-avatar">${escapeText(initials || "?")}</span><span class="modal-user-copy"><strong>${escapeText(item.title)}</strong><small>${escapeText(item.subtitle || "")}</small></span>${item.badge ? `<span class="role-badge">${escapeText(item.badge)}</span>` : ""}</div>`;
+            })
+            .join("");
+          modal.classList.add("open");
+          modal.setAttribute("aria-hidden", "false");
+          byId("teamModalAccept").focus();
+
+          return new Promise((resolve) => {
+            const finish = (accepted) => {
+              modal.classList.remove("open");
+              modal.setAttribute("aria-hidden", "true");
+              byId("teamModalAccept").removeEventListener("click", accept);
+              byId("teamModalCancel").removeEventListener("click", cancel);
+              byId("teamModalClose").removeEventListener("click", cancel);
+              modal.removeEventListener("click", backdropCancel);
+              document.removeEventListener("keydown", escapeCancel);
+              resolve(accepted);
+            };
+            const accept = () => finish(true);
+            const cancel = () => finish(false);
+            const backdropCancel = (event) => {
+              if (event.target === modal) cancel();
+            };
+            const escapeCancel = (event) => {
+              if (event.key === "Escape") cancel();
+            };
+            byId("teamModalAccept").addEventListener("click", accept);
+            byId("teamModalCancel").addEventListener("click", cancel);
+            byId("teamModalClose").addEventListener("click", cancel);
+            modal.addEventListener("click", backdropCancel);
+            document.addEventListener("keydown", escapeCancel);
+          });
+        }
+
+        byId("notificationButton").addEventListener("click", (event) => {
+          event.stopPropagation();
+          const popover = byId("notificationPopover");
+          popover.classList.toggle("open");
+          if (popover.classList.contains("open")) {
+            state.unreadNotifications = 0;
+            renderNotifications();
+          }
+        });
+        byId("clearNotifications").addEventListener("click", () => {
+          state.notifications = [];
+          state.unreadNotifications = 0;
+          renderNotifications();
+        });
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest(".notification-center")) byId("notificationPopover").classList.remove("open");
+        });
+
+        async function checkForUpdates(showCurrentToast = true) {
+          const button = byId("updateButton");
+          button.disabled = true;
+          button.textContent = "Đang kiểm tra…";
+          try {
+            const status = await api("/api/update/status");
+            button.textContent = `v${status.currentVersion}`;
+            button.classList.toggle("available", Boolean(status.updateAvailable));
+            if (!status.updateAvailable) {
+              if (showCurrentToast) notify(`Bạn đang dùng phiên bản mới nhất v${status.currentVersion}.`, "info");
+              return;
+            }
+            button.textContent = `Cập nhật v${status.latestVersion}`;
+            const accepted = await askInAppModal({
+              title: "Có phiên bản mới",
+              description: `Phiên bản hiện tại v${status.currentVersion} · phiên bản mới v${status.latestVersion}`,
+              warning: "Ứng dụng sẽ sao lưu bản hiện tại, tải mã nguồn từ GitHub, cập nhật các file chương trình và tự khởi động lại.",
+              listLabel: "Nguồn cập nhật",
+              items: [{ title: status.repository, subtitle: "Nhánh main · GitHub public" }],
+              acceptText: "Cập nhật ngay",
+              cancelText: "Để sau",
+            });
+            if (!accepted) return;
+            notify(`Đang cập nhật lên v${status.latestVersion}. Ứng dụng sẽ tự mở lại.`, "info");
+            await api("/api/update/apply", { method: "POST", body: "{}" });
+          } catch (error) {
+            button.textContent = "Kiểm tra cập nhật";
+            notify(`Không thể kiểm tra cập nhật: ${error.message}`, "error");
+          } finally {
+            button.disabled = false;
+          }
+        }
+        byId("updateButton").addEventListener("click", () => checkForUpdates(true));
+
+        byId("connectButton").addEventListener("click", async () => {
+          if (state.connected) {
+            await disconnect();
+            return;
+          }
+          setBusy(true);
+          byId("connectTitle").textContent = "Đang chờ đăng nhập...";
+          byId("connectDescription").textContent =
+            "Hoàn tất cửa sổ đăng nhập Microsoft 365 nếu được mở.";
+          setNotice(
+            "connectNotice",
+            "Đang kết nối Microsoft Graph. Có thể sẽ mở cửa sổ đăng nhập Microsoft.",
+            "info",
+          );
+          try {
+            const data = await api("/api/connect", {
+              method: "POST",
+              body: "{}",
+            });
+            state.connected = true;
+            byId("connectionBadge").classList.add("connected");
+            byId("connectionText").textContent = data.account;
+            byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
+            byId("connectDescription").textContent =
+              `Tenant: ${data.tenantId || "đã xác thực"}`;
+            byId("connectButton").textContent = "Ngắt kết nối";
+            byId("connectButton").classList.remove("primary");
+            byId("connectButton").classList.add("secondary");
+            setNotice(
+              "connectNotice",
+              "Kết nối thành công. Đang tải các team bạn tham gia.",
+              "info",
+            );
+            await loadTeams();
+          } catch (error) {
+            byId("connectTitle").textContent = "Chưa kết nối tài khoản";
+            byId("connectDescription").textContent =
+              "Đăng nhập bằng tài khoản Microsoft 365 có quyền Graph phù hợp.";
+            setNotice("connectNotice", error.message, "error");
+          } finally {
+            setBusy(false);
+            updateSummary();
+          }
+        });
+
+        async function disconnect() {
+          try {
+            await api("/api/disconnect", { method: "POST", body: "{}" });
+          } catch (_) {}
+          state.connected = false;
+          state.teams = [];
+          state.channelsByTeam.clear();
+          state.activeTeamId = "";
+          state.selectedTeams.clear();
+          state.selectedChannels.clear();
+          state.users.clear();
+          state.roles.clear();
+          state.expandedChannels.clear();
+          byId("connectionBadge").classList.remove("connected");
+          byId("connectionText").textContent = "Chưa kết nối";
+          byId("connectTitle").textContent = "Chưa kết nối tài khoản";
+          byId("connectDescription").textContent =
+            "Kết nối để tải team và thành viên từ Microsoft Graph.";
+          byId("connectButton").textContent = "Kết nối tài khoản";
+          byId("connectButton").classList.add("primary");
+          byId("connectButton").classList.remove("secondary");
+          byId("connectButton").onclick = null;
+          byId("teamSearch").value = "";
+          byId("teamSearch").disabled = true;
+          byId("userSearch").value = "";
+          byId("userSearch").disabled = true;
+          byId("teamList").innerHTML =
+            '<div class="empty">Kết nối để tải danh sách team.</div>';
+          byId("channelList").innerHTML =
+            '<div class="empty">Chọn một team để xem các kênh.</div>';
+          byId("channelTitle").textContent = "Private channel";
+          byId("selectAllChannels").disabled = true;
+          byId("results").className = "results";
+          renderUsers();
+          updateSummary();
+          setNotice("connectNotice", "Đã ngắt kết nối.", "info");
+        }
+
+        byId("teamSearch").addEventListener("input", renderTeams);
+        byId("channelFilter").addEventListener("change", renderChannels);
+        byId("selectAllChannels").addEventListener("change", () => {
+          const teamId = state.activeTeamId;
+          const checked = byId("selectAllChannels").checked;
+          byId("channelList")
+            .querySelectorAll("[data-channel]:not(:disabled)")
+            .forEach((input) => {
+              input.checked = checked;
+              const key = channelKey(teamId, input.dataset.channel);
+              if (checked) {
+                state.selectedTeams.add(teamId);
+                state.selectedChannels.add(key);
+                state.expandedChannels.add(`team-group|${teamId}`);
+                state.expandedChannels.add(key);
+              }
+              else {
+                state.selectedChannels.delete(key);
+                for (const key of state.roles.keys()) {
+                  if (key.startsWith(`channel|${teamId}|${input.dataset.channel}|`))
+                    state.roles.delete(key);
+                }
+                state.expandedChannels.delete(key);
+              }
+            });
+          renderChannels();
+          renderTeams();
+          updateSummary();
+        });
+        let searchTimer;
+        byId("userSearch").addEventListener("input", () => {
+          clearTimeout(searchTimer);
+          searchTimer = setTimeout(searchUsers, 280);
+        });
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest(".input-wrap"))
+            byId("userSuggestions").innerHTML = "";
+        });
+
+        async function runMultiTeamAdd() {
+          const selectedUsers = [...state.users.values()];
+          const operations = [...state.selectedTeams].map((teamId) => {
+            const team = state.teams.find((item) => item.id === teamId) || { id: teamId, displayName: teamId };
+            const channels = (state.channelsByTeam.get(teamId) || []).filter((channel) =>
+              state.selectedChannels.has(channelKey(teamId, channel.id)),
+            );
+            return { team, channels };
+          });
+          const confirmationItems = operations.flatMap(({ team, channels }) =>
+            channels.length
+              ? channels.flatMap((channel) => selectedUsers.map((user) => ({
+                  title: `${team.displayName} / ${channel.displayName}`,
+                  subtitle: `${user.displayName} · ${user.userPrincipalName || user.email}`,
+                  badge: state.roles.get(channelRoleKey(team.id, channel.id, user.id)) === "owner" ? "Owner" : "Member",
+                })))
+              : selectedUsers.map((user) => ({
+                  title: `${team.displayName} · Team/Standard`,
+                  subtitle: `${user.displayName} · ${user.userPrincipalName || user.email}`,
+                  badge: state.roles.get(teamRoleKey(team.id, user.id)) === "owner" ? "Owner" : "Member",
+                })),
+          );
+          const shouldProceed = await askInAppModal({
+            title: "Xác nhận phân công nhiều team",
+            description: `${operations.length} team · ${selectedUsers.length} người · ${confirmationItems.length} phân công`,
+            warning: "Team không chọn private channel sẽ chạy luồng Team/Standard. Team có private channel sẽ kiểm tra thành viên Team cha trước khi thêm vào kênh riêng.",
+            listLabel: "Team / Channel · Người dùng · Quyền",
+            items: confirmationItems,
+            acceptText: "Xác nhận thêm",
+          });
+          if (!shouldProceed) return;
+
+          setBusy(true);
+          notify(`Bắt đầu xử lý ${operations.length} team.`, "info");
+          const allResults = [];
+          try {
+            for (const { team, channels } of operations) {
+              const memberRequest = {
+                teamId: team.id,
+                users: selectedUsers.map((user) => ({
+                  id: user.id,
+                  displayName: user.displayName,
+                  userPrincipalName: user.userPrincipalName,
+                  email: user.email,
+                })),
+                assignments: channels.flatMap((channel) => selectedUsers.map((user) => ({
+                  channelId: channel.id,
+                  userId: user.id,
+                  role: state.roles.get(channelRoleKey(team.id, channel.id, user.id)) || "member",
+                }))),
+                teamAssignments: channels.length
+                  ? []
+                  : selectedUsers.map((user) => ({
+                      userId: user.id,
+                      role: state.roles.get(teamRoleKey(team.id, user.id)) || "member",
+                    })),
+                addMissingToTeam: false,
+              };
+              try {
+                let data = await api("/api/members", { method: "POST", body: JSON.stringify(memberRequest) });
+                if (data.needsTeamConfirmation) {
+                  const missingUsers = data.missingUsers || [];
+                  const accepted = await askInAppModal({
+                    title: `Thêm người vào ${team.displayName}?`,
+                    description: `${missingUsers.length} người chưa thuộc Team cha.`,
+                    warning: "Sau khi duyệt, các tài khoản này được thêm vào Team cha với quyền Member rồi mới được thêm vào private channel.",
+                    listLabel: "Người dùng cần thêm",
+                    items: missingUsers.map((user) => ({
+                      title: user.displayName || user.userPrincipalName || user.email || user.id,
+                      subtitle: user.userPrincipalName || user.email || "",
+                    })),
+                    acceptText: "Thêm và tiếp tục",
+                    cancelText: "Bỏ qua team này",
+                  });
+                  if (!accepted) {
+                    notify(`Đã bỏ qua Team ${team.displayName}.`, "info");
+                    continue;
+                  }
+                  memberRequest.addMissingToTeam = true;
+                  data = await api("/api/members", { method: "POST", body: JSON.stringify(memberRequest) });
+                }
+                const labeledResults = (data.results || []).map((result) => ({
+                  ...result,
+                  channel: `${team.displayName} / ${result.channel}`,
+                }));
+                allResults.push(...labeledResults);
+                renderResults(allResults);
+                notify(`Đã xử lý xong Team ${team.displayName}.`, "info");
+              } catch (error) {
+                allResults.push({ user: "—", channel: team.displayName, status: "Error", detail: error.message });
+                renderResults(allResults);
+                notify(`Team ${team.displayName}: ${error.message}`, "error");
+              }
+            }
+            const successful = allResults.filter((item) => item.status === "Added" || item.status === "Updated").length;
+            const failed = allResults.filter((item) => item.status === "Error" || item.status === "TeamAddError" || item.status === "NotInTeam").length;
+            notify(`Hoàn tất ${operations.length} team: ${successful} thành công${failed ? `, ${failed} lỗi` : ""}.`, failed ? "error" : "info");
+          } finally {
+            setBusy(false);
+            updateSummary();
+          }
+        }
+
+        byId("addButton").addEventListener("click", async () => {
+          return runMultiTeamAdd();
+          const selectedChannels = state.channels.filter((channel) =>
+            state.selectedChannels.has(channel.id),
+          );
+          const selectedUsers = [...state.users.values()];
+          const assignmentItems = selectedChannels.flatMap((channel) =>
+            selectedUsers.map((user) => ({
+              title: channel.displayName,
+              subtitle:
+                user.displayName +
+                " · " +
+                (user.userPrincipalName || user.email),
+              badge:
+                state.roles.get(`${channel.id}|${user.id}`) === "owner"
+                  ? "Owner"
+                  : "Member",
+            })),
+          );
+          const confirmationItems = assignmentItems.length
+            ? assignmentItems
+            : selectedUsers.map((user) => ({
+                title: "Team (tất cả standard channel)",
+                subtitle:
+                  user.displayName +
+                  " · " +
+                  (user.userPrincipalName || user.email),
+                badge: state.roles.get(`team|${user.id}`) === "owner"
+                  ? "Owner"
+                  : "Member",
+              }));
+          const shouldProceed = await askInAppModal({
+            title: selectedChannels.length
+              ? "Xác nhận phân công"
+              : "Xác nhận thêm vào team",
+            description: selectedChannels.length
+              ? `${selectedUsers.length} người · ${selectedChannels.length} private channel · ${assignmentItems.length} phân công`
+              : `${selectedUsers.length} người · thêm vào team và các standard channel`,
+            warning: selectedChannels.length
+              ? "Kiểm tra danh sách, channel và quyền Member/Owner trước khi gửi. Nếu có người ngoài team cha, hệ thống sẽ hỏi xác nhận riêng sau bước kiểm tra."
+              : "Standard channel không có danh sách thành viên riêng. Người dùng chỉ cần là thành viên của team để truy cập các standard channel.",
+            listLabel: selectedChannels.length
+              ? "Channel · Người dùng · Quyền"
+              : "Team · Người dùng · Quyền",
+            items: confirmationItems,
+            acceptText: "Xác nhận thêm",
+          });
+          if (!shouldProceed) return;
+          setBusy(true);
+          setNotice("addNotice", "Đang xử lý các thành viên...", "info");
+          try {
+            const selectedChannels = state.channels.filter((channel) =>
+              state.selectedChannels.has(channel.id),
+            );
+            const selectedUsers = [...state.users.values()];
+            const memberRequest = {
+              teamId: state.teamId,
+              users: selectedUsers.map((user) => ({
+                id: user.id,
+                displayName: user.displayName,
+                userPrincipalName: user.userPrincipalName,
+                email: user.email,
+              })),
+              assignments: selectedChannels.flatMap((channel) =>
+                selectedUsers.map((user) => ({
+                  channelId: channel.id,
+                  userId: user.id,
+                  role: state.roles.get(`${channel.id}|${user.id}`) || "member",
+                })),
+              ),
+              teamAssignments: selectedChannels.length
+                ? []
+                : selectedUsers.map((user) => ({
+                    userId: user.id,
+                    role: state.roles.get(`team|${user.id}`) || "member",
+                  })),
+              addMissingToTeam: false,
+            };
+            let data = await api("/api/members", {
+              method: "POST",
+              body: JSON.stringify(memberRequest),
+            });
+            if (data.needsTeamConfirmation) {
+              const missingUsers = data.missingUsers || [];
+              const accepted = await askInAppModal({
+                title: "Thêm người vào team cha?",
+                description: `${missingUsers.length} người chưa là thành viên của team này.`,
+                warning: selectedChannels.length
+                  ? "Thêm vào team cha cấp quyền truy cập rộng hơn các private channel đã chọn. Đồng ý sẽ thêm họ vào team với quyền Member, sau đó tiếp tục các phân công channel."
+                  : "Đồng ý sẽ thêm họ vào team với quyền Member. Khi đó họ tự động truy cập được các standard channel.",
+                listLabel: "Người dùng cần thêm",
+                items: missingUsers.map((user) => ({
+                  title:
+                    user.displayName ||
+                    user.userPrincipalName ||
+                    user.email ||
+                    user.id,
+                  subtitle: user.userPrincipalName || user.email || "",
+                })),
+                acceptText: "Thêm vào team và tiếp tục",
+                cancelText: "Hủy thao tác",
+              });
+              if (!accepted) {
+                setNotice(
+                  "addNotice",
+                  "Đã hủy. Chưa thêm ai vào team hoặc channel.",
+                  "info",
+                );
+                return;
+              }
+              setNotice(
+                "addNotice",
+                selectedChannels.length
+                  ? "Đang thêm người vào team cha rồi tiếp tục thêm vào private channel..."
+                  : "Đang thêm người vào team và các standard channel...",
+                "info",
+              );
+              memberRequest.addMissingToTeam = true;
+              data = await api("/api/members", {
+                method: "POST",
+                body: JSON.stringify(memberRequest),
+              });
+            }
+            renderResults(data.results || []);
+            const added = (data.results || []).filter(
+              (item) => item.status === "Added",
+            ).length;
+            const updated = (data.results || []).filter(
+              (item) => item.status === "Updated",
+            ).length;
+            const teamErrors = (data.results || []).filter(
+              (item) => item.status === "TeamAddError",
+            ).length;
+            setNotice(
+              "addNotice",
+              selectedChannels.length
+                ? `Hoàn tất. Đã thêm ${added} lượt vào private channel${teamErrors ? `; ${teamErrors} lượt không thêm được vào team cha` : ""}. Xem chi tiết bên dưới.`
+                : `Hoàn tất. Đã thêm ${added} người vào team${updated ? `; cập nhật quyền ${updated} người` : ""}${teamErrors ? `; ${teamErrors} người không thêm được` : ""}. Xem chi tiết bên dưới.`,
+              teamErrors ? "error" : "info",
+            );
+          } catch (error) {
+            setNotice("addNotice", error.message, "error");
+          } finally {
+            setBusy(false);
+            updateSummary();
+          }
+        });
+
+        api("/api/status")
+          .then((data) => {
+            if (!data.connected) return;
+            state.connected = true;
+            byId("connectionBadge").classList.add("connected");
+            byId("connectionText").textContent = data.account;
+            byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
+            byId("connectDescription").textContent =
+              `Tenant: ${data.tenantId || "đã xác thực"}`;
+            byId("connectButton").textContent = "Ngắt kết nối";
+            byId("connectButton").classList.remove("primary");
+            byId("connectButton").classList.add("secondary");
+            loadTeams().catch((error) =>
+              setNotice("teamNotice", error.message, "error"),
+            );
+          })
+          .catch(() => {});
+        checkForUpdates(false);
+      })();
+    </script>
+  </body>
+</html>
