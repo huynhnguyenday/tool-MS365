@@ -2,3 +2,5 @@ dist/
 .update-backup/
 *.tmp
 private-channel-results-*.csv
+AGENTS.md
+UXUI-AGENT.md

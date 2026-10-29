@@ -1,5 +1,4 @@
 Add-PrivateChannelMembers.ps1
-AGENTS.md
 Build-Package.ps1
 Open-PrivateChannelMembersUI.cmd
 README.md
