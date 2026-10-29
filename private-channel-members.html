@@ -9,7 +9,8 @@
       :root {
         --ink: #182322;
         --muted: #657472;
-        --line: #dce5e1;
+        --line: #c7d3ce;
+        --line-strong: #aabbb4;
         --canvas: #f4f7f4;
         --paper: #ffffff;
         --green: #146b57;
@@ -19,6 +20,13 @@
         --coral: #c85138;
         --red-bg: #fff0eb;
         --shadow: 0 14px 36px rgba(30, 62, 52, 0.08);
+        --page-background:
+          radial-gradient(
+            ellipse at 8% 0%,
+            rgba(243, 198, 92, 0.22),
+            transparent 28rem
+          ),
+          linear-gradient(135deg, #f5f8f4 0%, #eef4f0 55%, #f8f6ef 100%);
       }
 
       * {
@@ -27,15 +35,96 @@
       body {
         margin: 0;
         color: var(--ink);
-        background:
-          radial-gradient(
-            ellipse at 8% 0%,
-            rgba(243, 198, 92, 0.22),
-            transparent 28rem
-          ),
-          linear-gradient(135deg, #f5f8f4 0%, #eef4f0 55%, #f8f6ef 100%);
+        background: var(--page-background);
+        background-attachment: fixed;
         font-family: "Segoe UI", Tahoma, sans-serif;
         min-height: 100vh;
+      }
+      .floating-notification {
+        position: fixed;
+        z-index: 100;
+        top: 12px;
+      }
+      .floating-menu-button {
+        position: absolute;
+        z-index: 20;
+        top: 1px;
+        left: 1px;
+        display: grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        padding: 0;
+        border: 1px solid var(--line-strong);
+        border-radius: 17px 5px 17px 5px;
+        corner-shape: squircle;
+        color: var(--green-dark);
+        background: var(--paper);
+        box-shadow: 8px 8px 20px -16px rgba(24, 35, 34, 0.8);
+        font-weight: 800;
+      }
+      .floating-menu-button[aria-expanded="true"] {
+        color: #fff;
+        background: var(--green);
+      }
+      .menu-icon {
+        font-size: 21px;
+        line-height: 1;
+      }
+      .notification-center.floating-notification {
+        position: fixed;
+        z-index: 120;
+        right: 14px;
+      }
+      .notification-center.drawer-open .notification-button {
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .notification-backdrop {
+        position: fixed;
+        z-index: 110;
+        inset: 0;
+        display: none;
+        background: rgba(10, 24, 20, 0.56);
+      }
+      .notification-backdrop.open { display: block; }
+      .task-switcher {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 0 14px 12px;
+      }
+      .task-option {
+        min-height: 68px;
+        padding: 11px 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        color: var(--ink);
+        background: #f7faf8;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+      .task-option span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 500;
+      }
+      .task-option.active {
+        border-color: #8fc8ad;
+        color: var(--green-dark);
+        background: var(--mint);
+        box-shadow: inset 3px 0 var(--green);
+      }
+      .task-option:hover { border-color: #8fc8ad; }
+      .task-option:focus-visible,
+      .floating-menu-button:focus-visible,
+      .notification-button:focus-visible {
+        outline: 3px solid rgba(20, 107, 87, 0.28);
+        outline-offset: 2px;
       }
       button,
       input {
@@ -161,7 +250,7 @@
       }
       .panel {
         background: var(--paper);
-        border: 1px solid rgba(206, 220, 213, 0.9);
+        border: 1px solid var(--line-strong);
         border-radius: 10px;
         box-shadow: var(--shadow);
       }
@@ -282,20 +371,30 @@
         line-height: 18px;
       }
       .notification-popover {
-        position: absolute;
-        z-index: 12;
-        top: calc(100% + 8px);
+        position: fixed;
+        z-index: 120;
+        top: 0;
         right: 0;
         display: none;
-        width: min(380px, calc(100vw - 32px));
-        max-height: 420px;
+        width: min(360px, calc(100vw - 100px));
+        min-width: 240px;
+        height: 100dvh;
         overflow: hidden;
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        background: #fff;
-        box-shadow: 0 18px 45px rgba(24, 35, 34, 0.2);
+        border: 0;
+        border-left: 1px solid rgba(190, 207, 199, 0.9);
+        border-radius: 14px 0 0 14px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: -18px 0 48px rgba(24, 35, 34, 0.2);
       }
-      .notification-popover.open { display: block; }
+      .notification-popover.open {
+        display: flex;
+        flex-direction: column;
+        animation: notification-drawer-in 0.2s ease-out;
+      }
+      @keyframes notification-drawer-in {
+        from { opacity: 0; transform: translateX(100%); }
+        to { opacity: 1; transform: translateX(0); }
+      }
       .notification-head {
         display: flex;
         align-items: center;
@@ -305,7 +404,8 @@
         font-size: 13px;
         font-weight: 700;
       }
-      .notification-list { max-height: 360px; overflow-y: auto; }
+      .notification-actions { display: flex; align-items: center; gap: 4px; }
+      .notification-list { flex: 1; min-height: 0; overflow-y: auto; }
       .notification-item {
         padding: 10px 14px;
         border-bottom: 1px solid #edf1ef;
@@ -317,7 +417,7 @@
       .toast-stack {
         position: fixed;
         z-index: 40;
-        top: 14px;
+        top: 68px;
         right: 14px;
         display: grid;
         gap: 8px;
@@ -387,7 +487,7 @@
       .text-input {
         width: 100%;
         min-height: 42px;
-        border: 1px solid #cfdcd6;
+        border: 1px solid var(--line-strong);
         border-radius: 6px;
         outline: none;
         padding: 10px 12px;
@@ -524,7 +624,7 @@
       }
       .channel-filter {
         min-height: 30px;
-        border: 1px solid #cfdcd6;
+        border: 1px solid var(--line-strong);
         border-radius: 5px;
         padding: 4px 24px 4px 8px;
         color: var(--ink);
@@ -872,7 +972,7 @@
       .role-select {
         width: 100%;
         min-height: 33px;
-        border: 1px solid #cfdcd6;
+        border: 1px solid var(--line-strong);
         border-radius: 5px;
         padding: 5px 7px;
         color: var(--ink);
@@ -1097,17 +1197,30 @@
         gap: 10px;
       }
       .connect-panel {
-        display: grid;
-        grid-template-columns: max-content minmax(0, 1fr);
-        align-items: center;
+        position: fixed;
+        z-index: 90;
+        top: 74px;
+        left: 18px;
+        display: none;
+        width: min(560px, calc(100vw - 28px));
+        max-height: calc(100dvh - 78px);
+        overflow-y: auto;
+        transform-origin: top left;
+      }
+      .connect-panel.open {
+        display: block;
+        animation: task-panel-in 0.18s ease-out;
+      }
+      @keyframes task-panel-in {
+        from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
       .connect-panel .panel-head {
-        padding: 12px 16px;
+        padding: 14px 14px 10px;
       }
       .connect-panel .panel-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        padding: 8px 10px 8px 0;
+        display: block;
+        padding: 0 14px 14px;
       }
       .connect-panel .connect-row {
         min-height: 54px;
@@ -1127,22 +1240,68 @@
       }
       .work-grid {
         display: grid;
-        grid-template-columns:
-          minmax(570px, 1.84fr)
-          minmax(200px, 0.68fr)
-          minmax(310px, 1fr);
+        grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
         gap: 10px;
         align-items: stretch;
       }
+      .selection-stack {
+        display: grid;
+        height: calc(100dvh - 24px);
+        min-width: 0;
+        min-height: 540px;
+        grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
+        gap: 10px;
+      }
+      .selection-stack > .panel {
+        min-height: 0;
+        overflow: hidden;
+      }
       .work-grid > .panel {
-        height: calc(100dvh - 100px);
+        height: calc(100dvh - 24px);
         min-height: 540px;
         overflow: hidden;
+      }
+      #teamPanel {
+        position: relative;
+        overflow: hidden;
+        border-radius: 17px 10px 10px 10px;
+        corner-shape: squircle;
+      }
+      #teamPanel::before {
+        position: absolute;
+        z-index: 10;
+        top: -1px;
+        left: -1px;
+        width: 60px;
+        height: 60px;
+        box-sizing: border-box;
+        border: 0;
+        border-radius: 0 0 16px 0;
+        corner-shape: squircle;
+        background: var(--page-background);
+        background-attachment: fixed;
+        content: "";
+        pointer-events: none;
+      }
+      #teamPanel .panel-head {
+        min-height: 68px;
+        padding-left: 64px;
+      }
+      #teamPanel .panel-body {
+        padding-top: 8px;
+      }
+      #teamPanel .floating-menu-button:focus-visible {
+        outline-offset: -4px;
       }
       .work-grid .panel-head {
         min-height: 58px;
         align-items: center;
         padding: 14px 16px 10px;
+      }
+      .work-grid .panel-head h2,
+      .summary h2 {
+        font-size: 16px;
+        line-height: 1.25;
       }
       .work-grid .panel-body {
         padding: 0 16px 14px;
@@ -1151,23 +1310,50 @@
         grid-template-columns: minmax(280px, 1.18fr) minmax(210px, 0.82fr);
         height: 100%;
       }
-      #teamPanel .panel-body,
+      #teamPanel .panel-body {
+        height: calc(100% - 68px);
+        min-height: 0;
+      }
       #userPanel .panel-body {
         height: calc(100% - 58px);
         min-height: 0;
       }
       #teamPanel .team-layout > div {
         display: flex;
+        min-width: 0;
         min-height: 0;
         flex-direction: column;
       }
       #teamPanel .list-box {
+        height: auto;
         min-height: 0;
-        flex: 1;
+        flex: 1 1 0;
       }
       #teamPanel .list-scroll {
         height: 100%;
         max-height: none;
+      }
+      #teamPanel .channels-head + .list-box {
+        height: auto;
+        min-height: 0;
+      }
+      #teamPanel .channels-head {
+        display: grid;
+        height: 69px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        padding: 0 0 8px 0;
+      }
+      #teamPanel .channel-controls {
+        display: grid;
+        grid-template-rows: 20px 40px;
+        gap: 9px;
+        align-items: center;
+      }
+      #teamPanel .select-all {
+        align-self: end;
+        min-height: 40px;
+        padding-left: 8px;
       }
       #userPanel .user-input-area {
         height: 100%;
@@ -1175,13 +1361,37 @@
       }
       #userPanel .chips {
         align-content: start;
-        max-height: none;
+        height: 220px;
+        min-height: 220px;
         overflow-y: auto;
       }
       #userPanel .chip {
         width: 100%;
         justify-content: space-between;
         border-radius: 7px;
+      }
+      #teamPanel .field-label,
+      #teamPanel #channelTitle {
+        min-height: 20px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        font-size: 12px;
+        line-height: 20px;
+      }
+      #teamPanel .channel-controls {
+        gap: 0;
+        align-items: start;
+      }
+      #teamPanel .text-input,
+      #teamPanel .channel-filter,
+      #userPanel .text-input {
+        height: 40px;
+        min-height: 40px;
+        font-size: 13px;
+      }
+      #teamPanel .channel-filter {
+        padding-block: 6px;
       }
       .summary {
         position: static;
@@ -1211,30 +1421,47 @@
       }
       @media (max-width: 1180px) {
         .work-grid {
-          grid-template-columns: minmax(550px, 1.7fr) minmax(230px, 0.7fr);
+          grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
         }
         .work-grid > .panel {
           height: auto;
           min-height: 0;
         }
-        .work-grid .summary {
-          grid-column: 1 / -1;
+        .selection-stack {
+          height: calc(100dvh - 24px);
+          min-height: 540px;
+          grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
         }
-        #teamPanel .list-scroll,
-        #userPanel .chips,
         .assignment-table {
           max-height: 280px;
         }
-        #teamPanel .panel-body,
-        #userPanel .panel-body,
-        #teamPanel .team-layout,
-        #userPanel .user-input-area {
-          height: auto;
+        #teamPanel .list-scroll {
+          max-height: none;
         }
       }
       @media (max-width: 900px) {
         .work-grid {
           grid-template-columns: 1fr;
+        }
+        .selection-stack {
+          height: auto;
+          min-height: 0;
+          grid-template-rows: auto auto;
+        }
+        .selection-stack > .panel {
+          overflow: visible;
+        }
+        #teamPanel {
+          overflow: hidden;
+        }
+        #teamPanel .list-box {
+          height: 220px;
+          min-height: 220px;
+          flex: 0 0 220px;
+        }
+        #teamPanel .channels-head + .list-box {
+          height: 220px;
+          min-height: 220px;
         }
         .summary {
           position: static;
@@ -1252,11 +1479,12 @@
           padding: 16px 14px 32px;
         }
         .connect-panel {
-          display: block;
+          width: calc(100vw - 28px);
         }
         .connect-panel .panel-body {
-          padding: 0 15px 14px;
+          padding: 0 14px 14px;
         }
+        .task-switcher { grid-template-columns: 1fr; }
         .panel-head {
           padding: 17px 15px 12px;
         }
@@ -1266,8 +1494,13 @@
         .team-layout {
           grid-template-columns: 1fr;
         }
+        #teamPanel .team-layout {
+          height: auto;
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
         .list-scroll {
-          max-height: 185px;
+          max-height: none;
         }
         .connect-row {
           align-items: start;
@@ -1306,19 +1539,37 @@
     </style>
   </head>
   <body>
+    <div id="notificationBackdrop" class="notification-backdrop" aria-hidden="true"></div>
+    <div class="notification-center floating-notification">
+      <button id="notificationButton" class="notification-button" type="button" aria-label="Thông báo" aria-expanded="false" aria-controls="notificationPopover">🔔<span id="notificationCount" class="notification-count hidden">0</span></button>
+      <div id="notificationPopover" class="notification-popover" role="dialog" aria-modal="true" aria-label="Thông báo">
+        <div class="notification-head"><span>Thông báo</span><div class="notification-actions"><button id="clearNotifications" class="quiet" type="button">Xóa</button><button id="closeNotifications" class="quiet" type="button">Đóng</button></div></div>
+        <div id="notificationList" class="notification-list"><div class="empty">Chưa có thông báo.</div></div>
+      </div>
+    </div>
+
     <div class="shell">
       <div class="workspace">
           <section class="panel connect-panel" id="connectPanel">
             <div class="panel-head">
               <div>
                 <div class="step-title">
-                  <span class="step-number">01</span>
-                  <h2>Kết nối Microsoft 365</h2>
+                  <h2>Menu công cụ</h2>
                   <div id="connectionBadge" class="connection">
                     <span class="dot"></span><span id="connectionText">Chưa kết nối</span>
                   </div>
                 </div>
               </div>
+            </div>
+            <div class="task-switcher" role="group" aria-label="Chọn chức năng">
+              <button id="memberTaskButton" class="task-option active" type="button" aria-pressed="true">
+                Thêm người vào Team
+                <span>Quản lý Team và private channel</span>
+              </button>
+              <button id="passwordTaskButton" class="task-option" type="button" aria-pressed="false">
+                Reset mật khẩu
+                <span>Chức năng sẽ được bổ sung</span>
+              </button>
             </div>
             <div class="panel-body">
               <div class="connect-row">
@@ -1333,24 +1584,28 @@
                   Kết nối tài khoản
                 </button>
                 <button id="updateButton" class="update-button" type="button">Phiên bản…</button>
-                <div class="notification-center">
-                  <button id="notificationButton" class="notification-button" type="button" aria-label="Thông báo">🔔<span id="notificationCount" class="notification-count hidden">0</span></button>
-                  <div id="notificationPopover" class="notification-popover">
-                    <div class="notification-head"><span>Thông báo</span><button id="clearNotifications" class="quiet" type="button">Xóa</button></div>
-                    <div id="notificationList" class="notification-list"><div class="empty">Chưa có thông báo.</div></div>
-                  </div>
-                </div>
               </div>
               <div id="connectNotice" class="notice"></div>
             </div>
           </section>
 
         <div class="work-grid">
+          <div class="selection-stack">
           <section class="panel" id="teamPanel">
+            <button
+              id="taskbarButton"
+              class="floating-menu-button"
+              type="button"
+              aria-label="Mở menu công cụ"
+              title="Menu công cụ"
+              aria-expanded="false"
+              aria-controls="connectPanel"
+            >
+              <span class="menu-icon" aria-hidden="true">☰</span>
+            </button>
             <div class="panel-head">
               <div>
                 <div class="step-title">
-                  <span class="step-number">02</span>
                   <h2>Chọn team và kênh</h2>
                 </div>
               </div>
@@ -1436,6 +1691,7 @@
               <div id="userNotice" class="notice"></div>
             </div>
           </section>
+          </div>
 
         <aside class="panel summary">
           <div class="summary-top">
@@ -2014,22 +2270,69 @@
           });
         }
 
-        byId("notificationButton").addEventListener("click", (event) => {
+        const taskbarButton = byId("taskbarButton");
+        const taskPanel = byId("connectPanel");
+        const closeTaskPanel = () => {
+          taskPanel.classList.remove("open");
+          taskbarButton.setAttribute("aria-expanded", "false");
+        };
+        const notificationCenter = document.querySelector(".notification-center");
+        const notificationButton = byId("notificationButton");
+        const notificationDrawer = byId("notificationPopover");
+        const notificationBackdrop = byId("notificationBackdrop");
+        const closeNotificationDrawer = (restoreFocus = false) => {
+          notificationDrawer.classList.remove("open");
+          notificationBackdrop.classList.remove("open");
+          notificationBackdrop.setAttribute("aria-hidden", "true");
+          notificationCenter.classList.remove("drawer-open");
+          notificationButton.setAttribute("aria-expanded", "false");
+          if (restoreFocus) notificationButton.focus();
+        };
+        const openNotificationDrawer = () => {
+          notificationDrawer.classList.add("open");
+          notificationBackdrop.classList.add("open");
+          notificationBackdrop.setAttribute("aria-hidden", "false");
+          notificationCenter.classList.add("drawer-open");
+          notificationButton.setAttribute("aria-expanded", "true");
+          state.unreadNotifications = 0;
+          renderNotifications();
+          byId("closeNotifications").focus();
+        };
+        taskbarButton.addEventListener("click", (event) => {
           event.stopPropagation();
-          const popover = byId("notificationPopover");
-          popover.classList.toggle("open");
-          if (popover.classList.contains("open")) {
-            state.unreadNotifications = 0;
-            renderNotifications();
-          }
+          const open = taskPanel.classList.toggle("open");
+          taskbarButton.setAttribute("aria-expanded", String(open));
+          closeNotificationDrawer();
         });
+        taskPanel.addEventListener("click", (event) => event.stopPropagation());
+        byId("memberTaskButton").addEventListener("click", () => {
+          closeTaskPanel();
+          byId("teamPanel").querySelector("input, button")?.focus();
+        });
+        byId("passwordTaskButton").addEventListener("click", () => {
+          notify("Chức năng reset mật khẩu sẽ được bổ sung ở bước tiếp theo.", "info");
+        });
+
+        notificationButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          closeTaskPanel();
+          openNotificationDrawer();
+        });
+        notificationDrawer.addEventListener("click", (event) => event.stopPropagation());
+        notificationBackdrop.addEventListener("click", () => closeNotificationDrawer(true));
+        byId("closeNotifications").addEventListener("click", () => closeNotificationDrawer(true));
         byId("clearNotifications").addEventListener("click", () => {
           state.notifications = [];
           state.unreadNotifications = 0;
           renderNotifications();
         });
         document.addEventListener("click", (event) => {
-          if (!event.target.closest(".notification-center")) byId("notificationPopover").classList.remove("open");
+          if (!event.target.closest("#connectPanel") && !event.target.closest("#taskbarButton")) closeTaskPanel();
+        });
+        document.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
+          closeTaskPanel();
+          closeNotificationDrawer(true);
         });
 
         async function checkForUpdates(showCurrentToast = true) {

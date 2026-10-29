@@ -9,7 +9,7 @@
 - Team không chọn private channel: thêm/cập nhật người dùng ở cấp Team với quyền Member hoặc Owner. Thành viên Team tự có quyền truy cập standard channel.
 - Team có private channel: kiểm tra thành viên Team cha, yêu cầu xác nhận nếu cần thêm vào Team, sau đó thêm vào private channel với quyền Member hoặc Owner.
 - Phân công dạng cây `Team → Channel → Người dùng → Quyền`.
-- Toast thông báo và lịch sử thông báo trong biểu tượng chuông.
+- Menu công cụ chứa kết nối và cập nhật phiên bản; biểu tượng chuông mở lịch sử thông báo.
 - Kiểm tra và tự cập nhật từ nhánh `main` của repository public.
 - Sao lưu phiên bản cũ trước mỗi lần cập nhật.
 
@@ -47,7 +47,7 @@ Nếu cổng 8765 đang được sử dụng:
 
 ## Cách sử dụng
 
-1. Nhấn **Kết nối tài khoản** và đăng nhập Microsoft 365.
+1. Mở **Menu công cụ** (☰), nhấn **Kết nối tài khoản** và đăng nhập Microsoft 365.
 2. Tích các Team cần xử lý. Bấm tên Team để xem channel của Team đó.
 3. Tích các private channel cần cấp quyền. Không tích private channel nếu chỉ muốn thêm vào Team/standard channel.
 4. Tìm và chọn người dùng.
@@ -58,7 +58,7 @@ Mỗi Team được xử lý độc lập. Nếu một Team lỗi, kết quả c
 
 ## Cập nhật tự động
 
-Phiên bản cài đặt nằm trong `VERSION`. Nút phiên bản cạnh biểu tượng chuông so sánh bản hiện tại với file `VERSION` trên nhánh `main` của repository này.
+Phiên bản cài đặt nằm trong `VERSION`. Nút **Phiên bản** trong **Menu công cụ** so sánh bản hiện tại với file `VERSION` trên nhánh `main` của repository này.
 
 Khi có phiên bản mới, ứng dụng sẽ:
 
