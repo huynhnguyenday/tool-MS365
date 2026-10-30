@@ -5,1728 +5,287 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
     <title>Teams Channel Access</title>
-    <style>
-      :root {
-        --ink: #182322;
-        --muted: #657472;
-        --line: #c7d3ce;
-        --line-strong: #aabbb4;
-        --canvas: #f4f7f4;
-        --paper: #ffffff;
-        --green: #146b57;
-        --green-dark: #0d5144;
-        --mint: #e4f3ec;
-        --gold: #f3c65c;
-        --coral: #c85138;
-        --red-bg: #fff0eb;
-        --shadow: 0 14px 36px rgba(30, 62, 52, 0.08);
-        --page-background:
-          radial-gradient(
-            ellipse at 8% 0%,
-            rgba(243, 198, 92, 0.22),
-            transparent 28rem
-          ),
-          linear-gradient(135deg, #f5f8f4 0%, #eef4f0 55%, #f8f6ef 100%);
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-      body {
-        margin: 0;
-        color: var(--ink);
-        background: var(--page-background);
-        background-attachment: fixed;
-        font-family: "Segoe UI", Tahoma, sans-serif;
-        min-height: 100vh;
-      }
-      .floating-notification {
-        position: fixed;
-        z-index: 100;
-        top: 12px;
-      }
-      .floating-menu-button {
-        position: absolute;
-        z-index: 20;
-        top: 1px;
-        left: 1px;
-        display: grid;
-        place-items: center;
-        width: 54px;
-        height: 54px;
-        padding: 0;
-        border: 1px solid var(--line-strong);
-        border-radius: 17px 5px 17px 5px;
-        corner-shape: squircle;
-        color: var(--green-dark);
-        background: var(--paper);
-        box-shadow: 8px 8px 20px -16px rgba(24, 35, 34, 0.8);
-        font-weight: 800;
-      }
-      .floating-menu-button[aria-expanded="true"] {
-        color: #fff;
-        background: var(--green);
-      }
-      .menu-icon {
-        font-size: 21px;
-        line-height: 1;
-      }
-      .notification-center.floating-notification {
-        position: fixed;
-        z-index: 120;
-        right: 14px;
-      }
-      .notification-center.drawer-open .notification-button {
-        visibility: hidden;
-        pointer-events: none;
-      }
-      .notification-backdrop {
-        position: fixed;
-        z-index: 110;
-        inset: 0;
-        display: none;
-        background: rgba(10, 24, 20, 0.56);
-      }
-      .notification-backdrop.open { display: block; }
-      .task-switcher {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        padding: 0 14px 12px;
-      }
-      .task-option {
-        min-height: 68px;
-        padding: 11px 12px;
-        border: 1px solid var(--line-strong);
-        border-radius: 9px;
-        color: var(--ink);
-        background: #f7faf8;
-        text-align: left;
-        font-size: 12px;
-        font-weight: 800;
-        line-height: 1.35;
-      }
-      .task-option span {
-        display: block;
-        margin-top: 4px;
-        color: var(--muted);
-        font-size: 10px;
-        font-weight: 500;
-      }
-      .task-option.active {
-        border-color: #8fc8ad;
-        color: var(--green-dark);
-        background: var(--mint);
-        box-shadow: inset 3px 0 var(--green);
-      }
-      .task-option:hover { border-color: #8fc8ad; }
-      .task-option:focus-visible,
-      .floating-menu-button:focus-visible,
-      .notification-button:focus-visible {
-        outline: 3px solid rgba(20, 107, 87, 0.28);
-        outline-offset: 2px;
-      }
-      button,
-      input {
-        font: inherit;
-      }
-      button {
-        cursor: pointer;
-      }
-      button:disabled {
-        cursor: not-allowed;
-        opacity: 0.45;
-      }
-      .shell {
-        max-width: 1280px;
-        margin: 0 auto;
-        padding: 24px 30px 48px;
-      }
-      .topbar {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 52px;
-        margin-bottom: 34px;
-      }
-      .brand {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-      }
-      .brand-mark {
-        display: grid;
-        place-items: center;
-        width: 36px;
-        height: 36px;
-        border-radius: 11px;
-        color: #fff;
-        background: var(--green);
-        font-size: 17px;
-      }
-      .brand small {
-        display: block;
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 500;
-        margin-top: 3px;
-        letter-spacing: 0.04em;
-      }
-      .connection {
-        display: inline-flex;
-        align-items: center;
-        gap: 9px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.76);
-        border-radius: 999px;
-        padding: 9px 14px;
-        color: var(--muted);
-        font-size: 13px;
-      }
-      .dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #aab7b3;
-      }
-      .connection.connected {
-        color: var(--green-dark);
-        border-color: #badbca;
-        background: var(--mint);
-      }
-      .connection.connected .dot {
-        background: #23976f;
-        box-shadow: 0 0 0 4px rgba(35, 151, 111, 0.13);
-      }
-      .heading {
-        display: flex;
-        align-items: end;
-        justify-content: space-between;
-        gap: 24px;
-        margin-bottom: 24px;
-      }
-      .eyebrow {
-        color: var(--green);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.13em;
-        font-weight: 800;
-        margin-bottom: 9px;
-      }
-      h1 {
-        margin: 0;
-        font:
-          500 40px/1.08 Georgia,
-          "Times New Roman",
-          serif;
-        letter-spacing: 0;
-      }
-      .intro {
-        color: var(--muted);
-        margin: 11px 0 0;
-        max-width: 650px;
-        line-height: 1.55;
-        font-size: 14px;
-      }
-      .heading-note {
-        max-width: 250px;
-        padding: 11px 14px;
-        border-left: 3px solid var(--gold);
-        color: #5f6252;
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      .workspace {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 326px;
-        gap: 18px;
-        align-items: start;
-      }
-      .main-column {
-        display: grid;
-        gap: 16px;
-      }
-      .panel {
-        background: var(--paper);
-        border: 1px solid var(--line-strong);
-        border-radius: 10px;
-        box-shadow: var(--shadow);
-      }
-      .panel-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: start;
-        gap: 14px;
-        padding: 20px 22px 14px;
-      }
-      .step-title {
-        display: flex;
-        align-items: center;
-        gap: 11px;
-      }
-      .step-number {
-        display: grid;
-        place-items: center;
-        width: 28px;
-        height: 28px;
-        flex: 0 0 auto;
-        border-radius: 50%;
-        color: var(--green-dark);
-        background: var(--mint);
-        font-size: 12px;
-        font-weight: 800;
-      }
-      h2 {
-        font-size: 16px;
-        margin: 0;
-        font-weight: 700;
-      }
-      .step-sub {
-        margin: 5px 0 0 39px;
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      .panel-body {
-        padding: 0 22px 21px;
-      }
-      .connect-row {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        padding: 15px;
-        background: #f7faf8;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-      }
-      .connect-icon {
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        border-radius: 9px;
-        color: var(--green);
-        background: var(--mint);
-        font-weight: 800;
-      }
-      .connect-copy {
-        flex: 1;
-        min-width: 0;
-      }
-      .connect-copy strong {
-        display: block;
-        font-size: 13px;
-      }
-      .connect-copy span {
-        display: block;
-        color: var(--muted);
-        font-size: 12px;
-        margin-top: 4px;
-      }
-      .notification-center {
-        position: relative;
-      }
-      .update-button {
-        min-height: 38px;
-        padding: 7px 11px;
-        border: 1px solid #badbca;
-        border-radius: 8px;
-        color: var(--green-dark);
-        background: #f3faf6;
-        font-size: 11px;
-        font-weight: 800;
-        white-space: nowrap;
-      }
-      .update-button.available {
-        color: #7a4c00;
-        border-color: #e7c46c;
-        background: #fff8df;
-      }
-      .notification-button {
-        position: relative;
-        display: grid;
-        place-items: center;
-        width: 38px;
-        height: 38px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        color: var(--green-dark);
-        background: #fff;
-        font-size: 18px;
-      }
-      .notification-count {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        min-width: 18px;
-        height: 18px;
-        padding: 0 5px;
-        border-radius: 999px;
-        color: #fff;
-        background: var(--coral);
-        font-size: 10px;
-        font-weight: 800;
-        line-height: 18px;
-      }
-      .notification-popover {
-        position: fixed;
-        z-index: 120;
-        top: 0;
-        right: 0;
-        display: none;
-        width: min(360px, calc(100vw - 100px));
-        min-width: 240px;
-        height: 100dvh;
-        overflow: hidden;
-        border: 0;
-        border-left: 1px solid rgba(190, 207, 199, 0.9);
-        border-radius: 14px 0 0 14px;
-        background: rgba(255, 255, 255, 0.94);
-        box-shadow: -18px 0 48px rgba(24, 35, 34, 0.2);
-      }
-      .notification-popover.open {
-        display: flex;
-        flex-direction: column;
-        animation: notification-drawer-in 0.2s ease-out;
-      }
-      @keyframes notification-drawer-in {
-        from { opacity: 0; transform: translateX(100%); }
-        to { opacity: 1; transform: translateX(0); }
-      }
-      .notification-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--line);
-        font-size: 13px;
-        font-weight: 700;
-      }
-      .notification-actions { display: flex; align-items: center; gap: 4px; }
-      .notification-list { flex: 1; min-height: 0; overflow-y: auto; }
-      .notification-item {
-        padding: 10px 14px;
-        border-bottom: 1px solid #edf1ef;
-        font-size: 12px;
-        line-height: 1.4;
-      }
-      .notification-item.error { color: #8a3d2c; background: #fff8f5; }
-      .notification-item small { display: block; margin-top: 3px; color: var(--muted); }
-      .toast-stack {
-        position: fixed;
-        z-index: 40;
-        top: 68px;
-        right: 14px;
-        display: grid;
-        gap: 8px;
-        width: min(360px, calc(100vw - 28px));
-        pointer-events: none;
-      }
-      .toast {
-        padding: 11px 13px;
-        border: 1px solid #c8e3d4;
-        border-radius: 8px;
-        color: #285849;
-        background: #f0faf5;
-        box-shadow: 0 12px 30px rgba(24, 35, 34, 0.16);
-        font-size: 12px;
-        line-height: 1.4;
-        animation: toast-in 0.2s ease-out;
-      }
-      .toast.error { color: #813b2d; border-color: #efc9bd; background: #fff5f1; }
-      @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } }
-      .primary,
-      .secondary,
-      .quiet {
-        border: 0;
-        border-radius: 6px;
-        padding: 10px 15px;
-        font-size: 13px;
-        font-weight: 700;
-        transition:
-          background 0.15s,
-          transform 0.15s;
-      }
-      .primary {
-        color: #fff;
-        background: var(--green);
-      }
-      .primary:hover:not(:disabled) {
-        background: var(--green-dark);
-        transform: translateY(-1px);
-      }
-      .secondary {
-        color: var(--green-dark);
-        border: 1px solid #badbca;
-        background: #f3faf6;
-      }
-      .secondary:hover:not(:disabled) {
-        background: var(--mint);
-      }
-      .quiet {
-        color: var(--muted);
-        background: transparent;
-        padding-inline: 8px;
-      }
-      .quiet:hover {
-        color: var(--ink);
-        background: #f3f6f4;
-      }
-      .field-label {
-        display: block;
-        color: #475653;
-        font-size: 12px;
-        font-weight: 700;
-        margin-bottom: 7px;
-      }
-      .input-wrap {
-        position: relative;
-      }
-      .text-input {
-        width: 100%;
-        min-height: 42px;
-        border: 1px solid var(--line-strong);
-        border-radius: 6px;
-        outline: none;
-        padding: 10px 12px;
-        color: var(--ink);
-        background: #fff;
-        font-size: 13px;
-      }
-      .text-input:focus {
-        border-color: var(--green);
-        box-shadow: 0 0 0 3px rgba(20, 107, 87, 0.12);
-      }
-      .search-icon {
-        position: absolute;
-        right: 12px;
-        top: 11px;
-        color: #7e8b86;
-        font-size: 16px;
-        pointer-events: none;
-      }
-      .team-layout {
-        display: grid;
-        grid-template-columns: minmax(220px, 0.82fr) 1.18fr;
-        gap: 14px;
-      }
-      .list-box {
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        overflow: hidden;
-        background: #fff;
-        min-height: 155px;
-      }
-      .list-scroll {
-        max-height: 240px;
-        overflow: auto;
-      }
-      .list-row {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        gap: 10px;
-        padding: 11px 12px;
-        color: var(--ink);
-        text-align: left;
-        border: 0;
-        border-bottom: 1px solid #edf1ef;
-        background: #fff;
-      }
-      .list-row:last-child {
-        border-bottom: 0;
-      }
-      .list-row:hover {
-        background: #f7faf8;
-      }
-      .list-row.selected {
-        background: #edf7f1;
-        box-shadow: inset 3px 0 var(--green);
-      }
-      .team-select-row {
-        display: grid;
-        grid-template-columns: 18px minmax(0, 1fr) 22px;
-        align-items: center;
-        gap: 8px;
-        padding: 0 10px;
-        border-bottom: 1px solid #edf1ef;
-        background: #fff;
-      }
-      .team-select-row.active { background: #edf7f1; box-shadow: inset 3px 0 var(--green); }
-      .team-select-row input { width: 16px; height: 16px; accent-color: var(--green); }
-      .team-open {
-        min-width: 0;
-        padding: 10px 0;
-        border: 0;
-        color: var(--ink);
-        background: transparent;
-        text-align: left;
-      }
-      .list-row .row-main {
-        min-width: 0;
-        flex: 1;
-      }
-      .row-main strong {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 13px;
-      }
-      .row-main small {
-        display: block;
-        color: var(--muted);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 11px;
-        margin-top: 4px;
-      }
-      .arrow {
-        color: #8a9792;
-        font-size: 18px;
-      }
-      .channels-head {
-        display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 10px 12px;
-        border-bottom: 1px solid var(--line);
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .channel-controls {
-        display: flex;
-        min-width: 0;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-      }
-      #channelTitle {
-        display: block;
-        max-width: 100%;
-        overflow: hidden;
-        color: var(--ink);
-        font-weight: 700;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .select-all {
-        display: inline-flex;
-        flex: 0 0 auto;
-        align-items: center;
-        gap: 6px;
-        min-height: 30px;
-        white-space: nowrap;
-      }
-      .channel-filter {
-        min-height: 30px;
-        border: 1px solid var(--line-strong);
-        border-radius: 5px;
-        padding: 4px 24px 4px 8px;
-        color: var(--ink);
-        background: #fff;
-        font-size: 11px;
-      }
-      .channel-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 12px;
-        border-bottom: 1px solid #edf1ef;
-        font-size: 13px;
-      }
-      .channel-row:last-child {
-        border-bottom: 0;
-      }
-      .channel-row input,
-      .select-all input {
-        accent-color: var(--green);
-        width: 16px;
-        height: 16px;
-      }
-      .channel-row span {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .channel-kind {
-        margin-left: auto;
-        flex: 0 0 auto;
-        border-radius: 999px;
-        padding: 3px 7px;
-        color: #356657;
-        background: #e7f3ed;
-        font-size: 9px;
-        font-weight: 800;
-        text-transform: uppercase;
-      }
-      .channel-kind.standard {
-        color: #68716e;
-        background: #edf0ee;
-      }
-      .channel-row:has(input:disabled) {
-        color: #7c8783;
-        background: #fafbfa;
-      }
-      .channel-row input:disabled {
-        cursor: not-allowed;
-        opacity: 0.55;
-      }
-      .count {
-        color: var(--muted);
-        font-size: 11px;
-        white-space: nowrap;
-      }
-      .user-input-area {
-        display: grid;
-        gap: 9px;
-      }
-      .suggestions {
-        position: absolute;
-        z-index: 4;
-        top: calc(100% + 4px);
-        left: 0;
-        right: 0;
-        max-height: 220px;
-        overflow: auto;
-        background: white;
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        box-shadow: 0 12px 24px rgba(24, 35, 34, 0.13);
-      }
-      .suggestions:empty {
-        display: none;
-      }
-      .suggestion {
-        display: block;
-        width: 100%;
-        text-align: left;
-        border: 0;
-        background: #fff;
-        padding: 10px 12px;
-        border-bottom: 1px solid #edf1ef;
-      }
-      .suggestion:hover {
-        background: #f1f8f4;
-      }
-      .suggestion strong,
-      .suggestion small {
-        display: block;
-      }
-      .suggestion strong {
-        font-size: 13px;
-      }
-      .suggestion small {
-        margin-top: 3px;
-        color: var(--muted);
-        font-size: 11px;
-      }
-      .chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 7px;
-      }
-      .chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        max-width: 100%;
-        padding: 6px 8px 6px 10px;
-        border: 1px solid #c5dfd2;
-        border-radius: 999px;
-        background: #eff8f3;
-        color: #245a49;
-        font-size: 12px;
-      }
-      .chip span {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .chip button {
-        display: grid;
-        place-items: center;
-        border: 0;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        color: #527364;
-        background: transparent;
-        font-weight: 700;
-      }
-      .chip button:hover {
-        background: #d8ece1;
-      }
-      .summary {
-        position: sticky;
-        top: 18px;
-        overflow: hidden;
-      }
-      .summary-top {
-        padding: 20px 20px 15px;
-        border-bottom: 1px solid var(--line);
-      }
-      .summary-kicker {
-        color: var(--green);
-        text-transform: uppercase;
-        letter-spacing: 0.12em;
-        font-weight: 800;
-        font-size: 10px;
-      }
-      .summary h2 {
-        margin-top: 8px;
-        font:
-          500 24px/1.1 Georgia,
-          "Times New Roman",
-          serif;
-      }
-      .summary-counts {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 9px;
-        margin-top: 16px;
-      }
-      .metric {
-        padding: 11px;
-        border-radius: 6px;
-        background: #f4f8f5;
-      }
-      .metric b {
-        display: block;
-        font:
-          500 24px/1 Georgia,
-          serif;
-      }
-      .metric span {
-        display: block;
-        color: var(--muted);
-        font-size: 11px;
-        margin-top: 5px;
-      }
-      .summary-body {
-        padding: 16px 20px 20px;
-      }
-      .summary-label {
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-size: 10px;
-        font-weight: 800;
-        margin: 0 0 9px;
-      }
-      .summary-list {
-        display: grid;
-        gap: 7px;
-        max-height: 150px;
-        overflow: auto;
-        margin-bottom: 18px;
-      }
-      .summary-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: #41514d;
-        font-size: 12px;
-      }
-      .summary-item::before {
-        content: "";
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--gold);
-        flex: 0 0 auto;
-      }
-      .full-width {
-        width: 100%;
-        min-height: 43px;
-      }
-      .notice {
-        display: none;
-        margin-top: 14px;
-        padding: 11px 13px;
-        border-radius: 6px;
-        font-size: 12px;
-        line-height: 1.45;
-      }
-      .notice.show {
-        display: block;
-      }
-      .notice.info {
-        color: #345c50;
-        background: #edf7f1;
-        border: 1px solid #c8e3d4;
-      }
-      .notice.error {
-        color: #813b2d;
-        background: var(--red-bg);
-        border: 1px solid #efc9bd;
-      }
-      .results {
-        margin-top: 16px;
-        display: none;
-      }
-      .results.show {
-        display: block;
-      }
-      .assignment-table {
-        display: grid;
-        gap: 8px;
-        max-height: 430px;
-        overflow: auto;
-        padding-right: 3px;
-        margin-bottom: 16px;
-      }
-      .assignment-team {
-        overflow: hidden;
-        border: 1px solid #cbded5;
-        border-radius: 8px;
-        background: #f9fbfa;
-      }
-      .assignment-team-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        min-height: 46px;
-        padding: 10px 12px;
-        border: 0;
-        color: #fff;
-        background: var(--green);
-        text-align: left;
-        font-size: 12px;
-        font-weight: 800;
-      }
-      .assignment-team-head:hover { background: var(--green-dark); }
-      .assignment-team-head .count { color: rgba(255, 255, 255, 0.82); }
-      .assignment-team-body { display: none; padding: 8px; }
-      .assignment-team.open .assignment-team-body { display: grid; gap: 7px; }
-      .assignment-channel {
-        border: 1px solid var(--line);
-        border-radius: 7px;
-        overflow: hidden;
-        background: #fff;
-      }
-      .assignment-channel-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-        min-height: 42px;
-        padding: 9px 11px;
-        border: 0;
-        color: var(--ink);
-        background: #eef6f2;
-        text-align: left;
-        font-size: 12px;
-        font-weight: 750;
-      }
-      .assignment-channel-head:hover {
-        background: #edf7f1;
-      }
-      .assignment-channel-head span:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .assignment-channel-body {
-        display: none;
-        border-top: 1px solid var(--line);
-      }
-      .assignment-channel.open .assignment-channel-body {
-        display: block;
-      }
-      .assignment-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 112px;
-        align-items: center;
-        gap: 10px;
-        padding: 9px 10px;
-        border-bottom: 1px solid #edf1ef;
-      }
-      .assignment-row:last-child {
-        border-bottom: 0;
-      }
-      .assignment-person {
-        min-width: 0;
-      }
-      .assignment-person strong,
-      .assignment-person small {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .assignment-person strong {
-        font-size: 12px;
-      }
-      .assignment-person small {
-        color: var(--muted);
-        font-size: 10px;
-        margin-top: 3px;
-      }
-      .role-select {
-        width: 100%;
-        min-height: 33px;
-        border: 1px solid var(--line-strong);
-        border-radius: 5px;
-        padding: 5px 7px;
-        color: var(--ink);
-        background: #fff;
-        font-size: 11px;
-      }
-      .role-select:focus {
-        outline: 2px solid rgba(20, 107, 87, 0.22);
-        border-color: var(--green);
-      }
-      .role-badge {
-        border-radius: 999px;
-        padding: 3px 7px;
-        background: var(--mint);
-        color: var(--green-dark);
-        font-size: 10px;
-        font-weight: 700;
-      }
-      .modal-backdrop {
-        position: fixed;
-        inset: 0;
-        z-index: 20;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 18px;
-        background: rgba(18, 34, 30, 0.52);
-      }
-      .modal-backdrop.open {
-        display: flex;
-      }
-      .confirm-modal {
-        display: flex;
-        flex-direction: column;
-        width: min(500px, 100%);
-        height: min(520px, calc(100dvh - 36px));
-        max-height: 520px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.7);
-        background: var(--paper);
-        box-shadow: 0 24px 80px rgba(10, 28, 23, 0.3);
-        overflow: hidden;
-      }
-      .modal-head {
-        flex: 0 0 auto;
-        display: flex;
-        align-items: start;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 20px 22px 14px;
-        border-bottom: 1px solid var(--line);
-      }
-      .modal-head h2 {
-        font:
-          500 23px/1.12 Georgia,
-          "Times New Roman",
-          serif;
-      }
-      .modal-head p {
-        color: var(--muted);
-        font-size: 12px;
-        line-height: 1.45;
-        margin: 7px 0 0;
-      }
-      .modal-close {
-        display: grid;
-        place-items: center;
-        width: 32px;
-        height: 32px;
-        flex: 0 0 auto;
-        border: 0;
-        border-radius: 50%;
-        color: var(--muted);
-        background: #f1f5f2;
-        font-size: 20px;
-      }
-      .modal-close:hover {
-        color: var(--ink);
-        background: #e6eeea;
-      }
-      .modal-warning {
-        flex: 0 0 auto;
-        margin: 14px 20px 10px;
-        padding: 10px 12px;
-        border-left: 3px solid var(--gold);
-        background: #fff9e9;
-        color: #625635;
-        font-size: 11px;
-        line-height: 1.45;
-      }
-      .modal-list-title {
-        flex: 0 0 auto;
-        display: flex;
-        justify-content: space-between;
-        padding: 2px 22px 8px;
-        color: var(--muted);
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-weight: 800;
-      }
-      .modal-user-list {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        margin: 0 20px;
-        border: 1px solid var(--line);
-        border-radius: 6px;
-      }
-      .modal-user-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        min-height: 48px;
-        padding: 8px 10px;
-        border-bottom: 1px solid #edf1ef;
-      }
-      .modal-user-row:last-child {
-        border-bottom: 0;
-      }
-      .person-avatar {
-        display: grid;
-        place-items: center;
-        width: 29px;
-        height: 29px;
-        flex: 0 0 auto;
-        border-radius: 50%;
-        color: var(--green-dark);
-        background: var(--mint);
-        font-size: 11px;
-        font-weight: 800;
-      }
-      .modal-user-copy {
-        min-width: 0;
-      }
-      .modal-user-copy strong,
-      .modal-user-copy small {
-        display: block;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-      .modal-user-copy strong {
-        font-size: 12px;
-      }
-      .modal-user-copy small {
-        color: var(--muted);
-        font-size: 10px;
-        margin-top: 3px;
-      }
-      .modal-foot {
-        flex: 0 0 auto;
-        display: flex;
-        justify-content: end;
-        gap: 8px;
-        padding: 14px 20px 18px;
-      }
-      .result-row {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 8px 12px;
-        padding: 10px 0;
-        border-top: 1px solid var(--line);
-        font-size: 12px;
-      }
-      .result-row small {
-        grid-column: 1 / -1;
-        color: var(--muted);
-      }
-      .status {
-        border-radius: 999px;
-        padding: 4px 8px;
-        font-size: 10px;
-        font-weight: 800;
-        background: #eef2f0;
-        color: #5e6a66;
-      }
-      .status.added {
-        color: #176448;
-        background: #e4f3ec;
-      }
-      .status.error,
-      .status.notinteam,
-      .status.teamadderr {
-        color: #9a422e;
-        background: #fff0eb;
-      }
-      .empty {
-        display: grid;
-        place-items: center;
-        min-height: 122px;
-        padding: 18px;
-        color: #889590;
-        text-align: center;
-        font-size: 12px;
-        line-height: 1.5;
-      }
-      .loading {
-        color: var(--muted);
-        padding: 15px 12px;
-        font-size: 12px;
-      }
-      .footnote {
-        color: #71807a;
-        font-size: 11px;
-        line-height: 1.5;
-        margin-top: 17px;
-      }
-      .hidden {
-        display: none !important;
-      }
-      /* Compact desktop workspace: all primary controls fit in one viewport. */
-      .shell {
-        width: 100%;
-        max-width: none;
-        padding: 12px 14px;
-      }
-      .workspace {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 10px;
-      }
-      .connect-panel {
-        position: fixed;
-        z-index: 90;
-        top: 74px;
-        left: 18px;
-        display: none;
-        width: min(560px, calc(100vw - 28px));
-        max-height: calc(100dvh - 78px);
-        overflow-y: auto;
-        transform-origin: top left;
-      }
-      .connect-panel.open {
-        display: block;
-        animation: task-panel-in 0.18s ease-out;
-      }
-      @keyframes task-panel-in {
-        from { opacity: 0; transform: translateY(-10px) scale(0.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      .connect-panel .panel-head {
-        padding: 14px 14px 10px;
-      }
-      .connect-panel .panel-body {
-        display: block;
-        padding: 0 14px 14px;
-      }
-      .connect-panel .connect-row {
-        min-height: 54px;
-        padding: 8px 10px;
-      }
-      .connect-panel .connect-icon {
-        width: 34px;
-        height: 34px;
-      }
-      .connect-panel .notice {
-        margin-top: 6px;
-        padding: 7px 10px;
-      }
-      .connection {
-        padding: 5px 9px;
-        font-size: 11px;
-      }
-      .work-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
-        gap: 10px;
-        align-items: stretch;
-      }
-      .selection-stack {
-        display: grid;
-        height: calc(100dvh - 24px);
-        min-width: 0;
-        min-height: 540px;
-        grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
-        gap: 10px;
-      }
-      .selection-stack > .panel {
-        min-height: 0;
-        overflow: hidden;
-      }
-      .work-grid > .panel {
-        height: calc(100dvh - 24px);
-        min-height: 540px;
-        overflow: hidden;
-      }
-      #teamPanel {
-        position: relative;
-        overflow: hidden;
-        border-radius: 17px 10px 10px 10px;
-        corner-shape: squircle;
-      }
-      #teamPanel::before {
-        position: absolute;
-        z-index: 10;
-        top: -1px;
-        left: -1px;
-        width: 60px;
-        height: 60px;
-        box-sizing: border-box;
-        border: 0;
-        border-radius: 0 0 16px 0;
-        corner-shape: squircle;
-        background: var(--page-background);
-        background-attachment: fixed;
-        content: "";
-        pointer-events: none;
-      }
-      #teamPanel .panel-head {
-        min-height: 68px;
-        padding-left: 64px;
-      }
-      #teamPanel .panel-body {
-        padding-top: 8px;
-      }
-      #teamPanel .floating-menu-button:focus-visible {
-        outline-offset: -4px;
-      }
-      .work-grid .panel-head {
-        min-height: 58px;
-        align-items: center;
-        padding: 14px 16px 10px;
-      }
-      .work-grid .panel-head h2,
-      .summary h2 {
-        font-size: 16px;
-        line-height: 1.25;
-      }
-      .work-grid .panel-body {
-        padding: 0 16px 14px;
-      }
-      #teamPanel .team-layout {
-        grid-template-columns: minmax(280px, 1.18fr) minmax(210px, 0.82fr);
-        height: 100%;
-      }
-      #teamPanel .panel-body {
-        height: calc(100% - 68px);
-        min-height: 0;
-      }
-      #userPanel .panel-body {
-        height: calc(100% - 58px);
-        min-height: 0;
-      }
-      #teamPanel .team-layout > div {
-        display: flex;
-        min-width: 0;
-        min-height: 0;
-        flex-direction: column;
-      }
-      #teamPanel .list-box {
-        height: auto;
-        min-height: 0;
-        flex: 1 1 0;
-      }
-      #teamPanel .list-scroll {
-        height: 100%;
-        max-height: none;
-      }
-      #teamPanel .channels-head + .list-box {
-        height: auto;
-        min-height: 0;
-      }
-      #teamPanel .channels-head {
-        display: grid;
-        height: 69px;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: end;
-        padding: 0 0 8px 0;
-      }
-      #teamPanel .channel-controls {
-        display: grid;
-        grid-template-rows: 20px 40px;
-        gap: 9px;
-        align-items: center;
-      }
-      #teamPanel .select-all {
-        align-self: end;
-        min-height: 40px;
-        padding-left: 8px;
-      }
-      #userPanel .user-input-area {
-        height: 100%;
-        grid-template-rows: max-content minmax(0, 1fr);
-      }
-      #userPanel .chips {
-        align-content: start;
-        height: 220px;
-        min-height: 220px;
-        overflow-y: auto;
-      }
-      #userPanel .chip {
-        width: 100%;
-        justify-content: space-between;
-        border-radius: 7px;
-      }
-      #teamPanel .field-label,
-      #teamPanel #channelTitle {
-        min-height: 20px;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        font-size: 12px;
-        line-height: 20px;
-      }
-      #teamPanel .channel-controls {
-        gap: 0;
-        align-items: start;
-      }
-      #teamPanel .text-input,
-      #teamPanel .channel-filter,
-      #userPanel .text-input {
-        height: 40px;
-        min-height: 40px;
-        font-size: 13px;
-      }
-      #teamPanel .channel-filter {
-        padding-block: 6px;
-      }
-      .summary {
-        position: static;
-        display: flex;
-        flex-direction: column;
-      }
-      .summary-top {
-        padding: 14px 16px 12px;
-      }
-      .summary h2 {
-        margin-top: 4px;
-        font-size: 20px;
-      }
-      .summary-counts {
-        margin-top: 10px;
-      }
-      .summary-body {
-        min-height: 0;
-        overflow-y: auto;
-        padding: 12px 16px 14px;
-      }
-      .assignment-table {
-        max-height: calc(100dvh - 330px);
-      }
-      .footnote {
-        margin-top: 12px;
-      }
-      @media (max-width: 1180px) {
-        .work-grid {
-          grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
-        }
-        .work-grid > .panel {
-          height: auto;
-          min-height: 0;
-        }
-        .selection-stack {
-          height: calc(100dvh - 24px);
-          min-height: 540px;
-          grid-template-rows: minmax(0, 3fr) minmax(0, 2fr);
-        }
-        .assignment-table {
-          max-height: 280px;
-        }
-        #teamPanel .list-scroll {
-          max-height: none;
-        }
-      }
-      @media (max-width: 900px) {
-        .work-grid {
-          grid-template-columns: 1fr;
-        }
-        .selection-stack {
-          height: auto;
-          min-height: 0;
-          grid-template-rows: auto auto;
-        }
-        .selection-stack > .panel {
-          overflow: visible;
-        }
-        #teamPanel {
-          overflow: hidden;
-        }
-        #teamPanel .list-box {
-          height: 220px;
-          min-height: 220px;
-          flex: 0 0 220px;
-        }
-        #teamPanel .channels-head + .list-box {
-          height: 220px;
-          min-height: 220px;
-        }
-        .summary {
-          position: static;
-          grid-column: auto;
-        }
-        .summary-counts {
-          max-width: 360px;
-        }
-        .summary-list {
-          max-height: 96px;
-        }
-      }
-      @media (max-width: 620px) {
-        .shell {
-          padding: 16px 14px 32px;
-        }
-        .connect-panel {
-          width: calc(100vw - 28px);
-        }
-        .connect-panel .panel-body {
-          padding: 0 14px 14px;
-        }
-        .task-switcher { grid-template-columns: 1fr; }
-        .panel-head {
-          padding: 17px 15px 12px;
-        }
-        .panel-body {
-          padding: 0 15px 16px;
-        }
-        .team-layout {
-          grid-template-columns: 1fr;
-        }
-        #teamPanel .team-layout {
-          height: auto;
-          grid-template-columns: 1fr;
-          gap: 14px;
-        }
-        .list-scroll {
-          max-height: none;
-        }
-        .connect-row {
-          align-items: start;
-          flex-wrap: wrap;
-        }
-        .connect-copy {
-          min-width: calc(100% - 60px);
-        }
-        .connect-row .primary {
-          width: 100%;
-        }
-        .summary-top,
-        .summary-body {
-          padding-left: 15px;
-          padding-right: 15px;
-        }
-        .confirm-modal {
-          height: min(520px, calc(100dvh - 24px));
-        }
-        .modal-head {
-          padding: 17px 16px 12px;
-        }
-        .modal-warning {
-          margin-inline: 14px;
-        }
-        .modal-list-title {
-          padding-inline: 16px;
-        }
-        .modal-user-list {
-          margin-inline: 14px;
-        }
-        .modal-foot {
-          padding-inline: 14px;
-        }
-      }
-    </style>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=4" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" href="/favicon-16.png?v=4" sizes="16x16" />
+    <link rel="icon" type="image/png" href="/favicon-32.png?v=4" sizes="32x32" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;family=Google+Sans+Flex:opsz,wght@1..144,1..1000&amp;display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="fontawesome.min.css" />
+    <link rel="stylesheet" href="fontawesome-solid.min.css" />
+    <link rel="stylesheet" href="private-channel-members.css" />
   </head>
   <body>
-    <div id="notificationBackdrop" class="notification-backdrop" aria-hidden="true"></div>
+    <div
+      id="notificationBackdrop"
+      class="notification-backdrop"
+      aria-hidden="true"
+    ></div>
     <div class="notification-center floating-notification">
-      <button id="notificationButton" class="notification-button" type="button" aria-label="Thông báo" aria-expanded="false" aria-controls="notificationPopover">🔔<span id="notificationCount" class="notification-count hidden">0</span></button>
-      <div id="notificationPopover" class="notification-popover" role="dialog" aria-modal="true" aria-label="Thông báo">
-        <div class="notification-head"><span>Thông báo</span><div class="notification-actions"><button id="clearNotifications" class="quiet" type="button">Xóa</button><button id="closeNotifications" class="quiet" type="button">Đóng</button></div></div>
-        <div id="notificationList" class="notification-list"><div class="empty">Chưa có thông báo.</div></div>
+      <button
+        id="notificationButton"
+        class="notification-button"
+        type="button"
+        aria-label="Thông báo"
+        aria-expanded="false"
+        aria-controls="notificationPopover"
+        title="Thông báo"
+      >
+        <i class="fa-solid fa-bell" aria-hidden="true"></i><span id="notificationCount" class="notification-count hidden"
+          >0</span
+        >
+      </button>
+      <div
+        id="notificationPopover"
+        class="notification-popover"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Thông báo"
+      >
+        <div class="notification-head">
+          <span>Thông báo</span>
+          <div class="notification-actions">
+            <button id="clearNotifications" class="quiet icon-button" type="button" aria-label="Xóa lịch sử thông báo" title="Xóa lịch sử thông báo">
+              <i class="fa-solid fa-trash-can" aria-hidden="true"></i></button
+            ><button id="closeNotifications" class="quiet icon-button" type="button" aria-label="Đóng thông báo" title="Đóng thông báo">
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <div id="notificationList" class="notification-list">
+          <div class="empty">Chưa có thông báo.</div>
+        </div>
       </div>
     </div>
 
     <div class="shell">
       <div class="workspace">
-          <section class="panel connect-panel" id="connectPanel">
-            <div class="panel-head">
-              <div>
-                <div class="step-title">
-                  <h2>Menu công cụ</h2>
-                  <div id="connectionBadge" class="connection">
-                    <span class="dot"></span><span id="connectionText">Chưa kết nối</span>
-                  </div>
+        <section class="panel connect-panel" id="connectPanel">
+          <div class="panel-head">
+            <div>
+              <div class="step-title">
+                <h2>Menu công cụ</h2>
+                <div id="connectionBadge" class="connection">
+                  <span class="dot"></span
+                  ><span id="connectionText">Chưa kết nối</span>
                 </div>
               </div>
             </div>
-            <div class="task-switcher" role="group" aria-label="Chọn chức năng">
-              <button id="memberTaskButton" class="task-option active" type="button" aria-pressed="true">
-                Thêm người vào Team
-                <span>Quản lý Team và private channel</span>
-              </button>
-              <button id="passwordTaskButton" class="task-option" type="button" aria-pressed="false">
-                Reset mật khẩu
-                <span>Chức năng sẽ được bổ sung</span>
-              </button>
-            </div>
-            <div class="panel-body">
-              <div class="connect-row">
-                <div class="connect-icon">M</div>
-                <div class="connect-copy">
-                  <strong id="connectTitle">Chưa kết nối tài khoản</strong
-                  ><span id="connectDescription"
-                    >Kết nối để tải team và thành viên từ Microsoft Graph.</span
-                  >
-                </div>
-                <button id="connectButton" class="primary">
-                  Kết nối tài khoản
-                </button>
-                <button id="updateButton" class="update-button" type="button">Phiên bản…</button>
+          </div>
+          <div class="task-switcher" role="group" aria-label="Chọn chức năng">
+            <button
+              id="memberTaskButton"
+              class="task-option active"
+              type="button"
+              aria-pressed="true"
+            >
+              <i class="fa-solid fa-users-gear" aria-hidden="true"></i> Quản lý thành viên
+              <span>Quản lý Team và private channel</span>
+            </button>
+            <button
+              id="passwordTaskButton"
+              class="task-option"
+              type="button"
+              aria-pressed="false"
+            >
+              <i class="fa-solid fa-key" aria-hidden="true"></i> Reset mật khẩu
+              <span>Chức năng sẽ được bổ sung</span>
+            </button>
+          </div>
+          <div class="panel-body">
+            <div class="connect-row">
+              <div class="connect-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></div>
+              <div class="connect-copy">
+                <strong id="connectTitle">Chưa kết nối tài khoản</strong
+                ><span id="connectDescription"
+                  >Kết nối để tải team và thành viên từ Microsoft Graph.</span
+                >
               </div>
-              <div id="connectNotice" class="notice"></div>
+              <button id="connectButton" class="primary">
+                <i class="fa-solid fa-plug" aria-hidden="true"></i> <span id="connectButtonLabel">Kết nối tài khoản</span>
+              </button>
+              <button id="updateButton" class="update-button" type="button">
+                <i class="fa-solid fa-cloud-arrow-down" aria-hidden="true"></i> <span id="updateButtonLabel">Phiên bản…</span>
+              </button>
             </div>
-          </section>
+            <div id="connectNotice" class="notice"></div>
+          </div>
+        </section>
 
         <div class="work-grid">
           <div class="selection-stack">
-          <section class="panel" id="teamPanel">
-            <button
-              id="taskbarButton"
-              class="floating-menu-button"
-              type="button"
-              aria-label="Mở menu công cụ"
-              title="Menu công cụ"
-              aria-expanded="false"
-              aria-controls="connectPanel"
-            >
-              <span class="menu-icon" aria-hidden="true">☰</span>
-            </button>
-            <div class="panel-head">
-              <div>
-                <div class="step-title">
-                  <h2>Chọn team và kênh</h2>
-                </div>
-              </div>
-              <span id="teamCount" class="count"></span>
-            </div>
-            <div class="panel-body">
-              <div class="team-layout">
+            <section class="panel" id="teamPanel">
+              <button
+                id="taskbarButton"
+                class="floating-menu-button"
+                type="button"
+                aria-label="Mở menu công cụ"
+                title="Menu công cụ"
+                aria-expanded="false"
+                aria-controls="connectPanel"
+              >
+                <i class="fa-solid fa-bars menu-icon" aria-hidden="true"></i>
+              </button>
+              <div class="panel-head">
                 <div>
-                  <label class="field-label" for="teamSearch">Tìm team</label>
-                  <div class="input-wrap">
-                    <input
-                      id="teamSearch"
-                      class="text-input"
-                      placeholder="Tên team..."
-                      autocomplete="off"
-                    /><span class="search-icon">⌕</span>
+                  <div class="step-title">
+                    <h2>Chọn team và kênh</h2>
                   </div>
-                  <div class="list-box" style="margin-top: 9px">
-                    <div id="teamList" class="list-scroll">
-                      <div class="empty">Kết nối để tải danh sách team.</div>
+                </div>
+                <span id="teamCount" class="count"></span>
+              </div>
+              <div class="panel-body">
+                <div class="team-layout">
+                  <div>
+                    <label class="field-label" for="teamSearch">Tìm team</label>
+                    <div class="team-search-row">
+                      <div class="input-wrap">
+                        <input
+                          id="teamSearch"
+                          class="text-input"
+                          placeholder="Tên team..."
+                          autocomplete="off"
+                        /><i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+                      </div>
+                      <button id="clearTeamSelection" type="button" class="clear-selection-button icon-button" aria-label="Xóa lựa chọn Team và kênh" title="Xóa lựa chọn Team và kênh" disabled><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="list-box team-list-box">
+                      <div id="teamList" class="list-scroll">
+                        <div class="empty">Kết nối để tải danh sách team.</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <div class="channels-head">
-                    <div class="channel-controls">
-                      <span id="channelTitle">Channels</span>
-                      <select
-                        id="channelFilter"
-                        class="channel-filter"
-                        aria-label="Lọc loại channel"
-                        disabled
+                  <div>
+                    <div class="channels-head">
+                      <div class="channel-controls">
+                        <span id="channelTitle">Channels</span>
+                        <select
+                          id="channelFilter"
+                          class="channel-filter"
+                          aria-label="Lọc loại channel"
+                          disabled
+                        >
+                          <option value="all">All</option>
+                          <option value="private">Private</option>
+                          <option value="standard">Standard</option>
+                        </select>
+                      </div>
+                      <label class="select-all"
+                        ><input
+                          id="selectAllChannels"
+                          type="checkbox"
+                          disabled
+                        />
+                        Chọn private</label
                       >
-                        <option value="all">All</option>
-                        <option value="private">Private</option>
-                        <option value="standard">Standard</option>
-                      </select>
                     </div>
-                    <label class="select-all"
-                      ><input id="selectAllChannels" type="checkbox" disabled />
-                      Chọn private</label
-                    >
-                  </div>
-                  <div
-                    class="list-box"
-                    style="border-top: 0; border-radius: 0 0 7px 7px"
-                  >
-                    <div id="channelList" class="list-scroll">
-                      <div class="empty">Chọn một team để xem các kênh.</div>
+                    <div class="list-box channel-list-box">
+                      <div id="channelList" class="list-scroll">
+                        <div class="empty">Chọn một team để xem các kênh.</div>
+                      </div>
                     </div>
                   </div>
                 </div>
+                <div id="teamNotice" class="notice"></div>
               </div>
-              <div id="teamNotice" class="notice"></div>
-            </div>
-          </section>
+            </section>
 
-          <section class="panel" id="userPanel">
-            <div class="panel-head">
-              <div>
-                <div class="step-title">
-                  <span class="step-number">03</span>
-                  <h2>Chọn người dùng</h2>
+            <section class="panel" id="userPanel">
+              <div class="panel-head">
+                <div>
+                  <div class="step-title">
+                    <span class="step-number">03</span>
+                    <h2 id="userPanelTitle">Chọn người dùng</h2>
+                  </div>
+                </div>
+                <span id="userCount" class="count">0 đã chọn</span>
+              </div>
+              <div class="panel-body">
+                <div class="user-panel-columns">
+                  <section class="user-search-column" aria-labelledby="userSearchTitle">
+                    <h3 id="userSearchTitle" class="user-column-title">Tìm kiếm &amp; chọn</h3>
+                    <div class="user-input-area">
+                      <div class="input-wrap">
+                        <input
+                          id="userSearch"
+                          class="text-input"
+                          placeholder="Nhập tên hoặc email..."
+                          autocomplete="off"
+                          disabled
+                        />
+                        <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+                        <div id="userSuggestions" class="suggestions"></div>
+                      </div>
+                    </div>
+                    <section id="memberPicker" class="member-picker" hidden aria-label="Thành viên trong phạm vi đã chọn">
+                      <div class="member-picker-head"><span id="memberPickerCount" role="status"></span><button id="refreshMembers" type="button" class="quiet icon-button" aria-label="Tải lại thành viên" title="Tải lại thành viên"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button></div>
+                      <div id="memberPickerList" class="member-picker-list" aria-live="polite"></div>
+                    </section>
+                  </section>
+                  <section class="user-selected-column" aria-labelledby="selectedUsersTitle">
+                    <div class="user-selected-head">
+                      <h3 id="selectedUsersTitle" class="user-column-title">Người dùng đã chọn</h3>
+                      <button id="clearUserSelection" type="button" class="clear-selection-button icon-button" aria-label="Xóa hết lựa chọn người dùng" title="Xóa hết lựa chọn người dùng" disabled><i class="fa-solid fa-eraser" aria-hidden="true"></i></button>
+                    </div>
+                    <div id="selectedUsers" class="chips"></div>
+                  </section>
+                </div>
+                <div id="userNotice" class="notice"></div>
+              </div>
+            </section>
+          </div>
+
+          <aside class="panel summary">
+            <div class="summary-top">
+              <div class="summary-kicker">Tóm tắt thao tác</div>
+              <h2 id="summaryTitle">Sẵn sàng thêm</h2>
+              <label class="operation-label" for="membershipOperation">Thao tác thành viên</label>
+              <select id="membershipOperation" class="text-input">
+                <option value="add">Thêm thành viên</option>
+                <option value="update">Cập nhật quyền</option>
+                <option value="remove">Gỡ thành viên</option>
+              </select>
+              <div class="summary-counts">
+                <div class="metric">
+                  <b id="selectedTeamCount">0</b><span>team đã chọn</span>
+                </div>
+                <div class="metric">
+                  <b id="selectedChannelCount">0</b><span>kênh đã chọn</span>
+                </div>
+                <div class="metric">
+                  <b id="selectedUserCount">0</b><span>người đã chọn</span>
                 </div>
               </div>
-              <span id="userCount" class="count">0 đã chọn</span>
             </div>
-            <div class="panel-body">
-              <div class="user-input-area">
-                <div class="input-wrap">
-                  <input
-                    id="userSearch"
-                    class="text-input"
-                    placeholder="Nhập tên hoặc email..."
-                    autocomplete="off"
-                    disabled
-                  />
-                  <span class="search-icon">⌕</span>
-                  <div id="userSuggestions" class="suggestions"></div>
+            <div class="summary-body">
+              <p id="summaryHelp" class="summary-label">
+                Phân công theo Team / kênh · mặc định Member
+              </p>
+              <section
+                id="operationProgress"
+                class="operation-progress"
+                hidden
+                aria-live="polite"
+              >
+                <strong id="progressLabel"></strong
+                ><progress id="progressBar" value="0" max="1"></progress
+                ><span id="progressDetail"></span>
+              </section>
+              <div id="assignmentTable" class="assignment-table">
+                <div class="empty summary-empty">
+                  Chọn người dùng; private channel là tùy chọn.
                 </div>
-                <div id="selectedUsers" class="chips"></div>
               </div>
-              <div id="userNotice" class="notice"></div>
+              <button id="addButton" class="primary full-width" disabled>
+                <i id="addButtonIcon" class="fa-solid fa-user-plus" aria-hidden="true"></i> <span id="addButtonLabel">Thêm thành viên</span>
+              </button>
+              <button id="viewResults" class="secondary full-width" hidden>
+                <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Xem lại kết quả
+              </button>
+              <div id="addNotice" class="notice"></div>
+              <div id="results" class="results"></div>
             </div>
-          </section>
-          </div>
-
-        <aside class="panel summary">
-          <div class="summary-top">
-            <div class="summary-kicker">Tóm tắt thao tác</div>
-            <h2>Sẵn sàng thêm</h2>
-            <div class="summary-counts">
-              <div class="metric">
-                <b id="selectedTeamCount">0</b><span>team đã chọn</span>
-              </div>
-              <div class="metric">
-                <b id="selectedChannelCount">0</b><span>kênh đã chọn</span>
-              </div>
-              <div class="metric">
-                <b id="selectedUserCount">0</b><span>người đã chọn</span>
-              </div>
-            </div>
-          </div>
-          <div class="summary-body">
-            <p class="summary-label">Phân công theo Team / kênh · mặc định Member</p>
-            <div id="assignmentTable" class="assignment-table">
-              <div class="empty" style="min-height: 80px; padding: 0">
-                Chọn người dùng; private channel là tùy chọn.
-              </div>
-            </div>
-            <button id="addButton" class="primary full-width" disabled>
-              Thêm thành viên
-            </button>
-            <div id="addNotice" class="notice"></div>
-            <div id="results" class="results"></div>
-            <p class="footnote">
-              Người ngoài team cha chỉ được thêm sau xác nhận riêng. Kết quả
-              từng cặp Team/người/kênh sẽ hiện ở đây.
-            </p>
-          </div>
-        </aside>
+          </aside>
         </div>
       </div>
     </div>
@@ -1752,8 +311,10 @@
             class="modal-close"
             type="button"
             aria-label="Đóng"
+            title="Đóng"
+            title="Đóng"
           >
-            ×
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
           </button>
         </header>
         <div id="teamConfirmWarning" class="modal-warning">
@@ -1777,6 +338,28 @@
       </section>
     </div>
 
+    <dialog id="resultDialog" aria-labelledby="resultTitle">
+      <header class="modal-head">
+        <h2 id="resultTitle" tabindex="-1">Kết quả xử lý</h2>
+        <button id="resultClose" type="button" class="icon-button" aria-label="Đóng và giữ dữ liệu" title="Đóng và giữ dữ liệu">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </header>
+      <p id="resultTotals" role="status"></p>
+      <nav id="resultFilters" aria-label="Lọc kết quả">
+        <button type="button" data-filter="all">Tất cả</button
+        ><button type="button" data-filter="success">Thành công</button
+        ><button type="button" data-filter="error">Lỗi</button
+        ><button type="button" data-filter="skipped">Bỏ qua</button>
+      </nav>
+      <div id="resultList" tabindex="0"></div>
+      <footer class="modal-foot">
+        <button id="resultKeep" type="button">Hủy — giữ dữ liệu</button
+        ><button id="resultReset" type="button" class="primary">
+          Đóng &amp; làm mới
+        </button>
+      </footer>
+    </dialog>
     <script>
       (() => {
         const token = "__APP_TOKEN__";
@@ -1791,8 +374,15 @@
           roles: new Map(),
           expandedChannels: new Set(),
           notifications: [],
-          unreadNotifications: 0,
           busy: false,
+          operation: "add",
+          confirming: false,
+          existingMembers: new Map(),
+          memberPickerKey: "",
+          memberPickerStatus: "idle",
+          memberPickerRequest: 0,
+          memberPickerError: "",
+          directoryRequest: 0,
         };
         const byId = (id) => document.getElementById(id);
         const api = async (path, options = {}) => {
@@ -1805,39 +395,82 @@
             },
           });
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok)
-            throw new Error(
+          if (!response.ok) {
+            const error = new Error(
               payload.error || `Yêu cầu thất bại (${response.status})`,
             );
+            error.trace = payload.trace || [];
+            error.events = payload.events || [];
+            throw error;
+          }
           return payload;
         };
         const renderNotifications = () => {
           const count = byId("notificationCount");
-          count.textContent = state.unreadNotifications;
-          count.classList.toggle("hidden", state.unreadNotifications === 0);
+          const unread = state.notifications.filter((item) => !item.read).length;
+          count.textContent = unread > 99 ? "99+" : unread;
+          count.classList.toggle("hidden", unread === 0);
+          byId("notificationButton").setAttribute("aria-label", `Thông báo: ${unread} chưa đọc`);
           byId("notificationList").innerHTML = state.notifications.length
             ? state.notifications
                 .map(
-                  (item) => `<div class="notification-item ${item.type === "error" ? "error" : ""}">${escapeText(item.text)}<small>${escapeText(item.time)}</small></div>`,
+                  (item) =>
+                    `<div class="notification-item ${item.type} ${item.read ? "" : "unread"}"><strong>${({success: "Thành công", warning: "Cảnh báo", error: "Lỗi", info: "Thông tin"})[item.type]}</strong><p>${escapeText(item.text)}</p><small>${escapeText(item.time)}${item.repeats > 1 ? ` · Lặp ${item.repeats} lần` : ""}</small>${item.results ? `<button type="button" class="quiet" data-report="${item.id}"><i class="fa-solid fa-list-check" aria-hidden="true"></i> Xem chi tiết</button>` : ""}</div>`,
                 )
                 .join("")
             : '<div class="empty">Chưa có thông báo.</div>';
         };
-        const notify = (text, type = "info") => {
+        let notificationSequence = 0;
+        const notify = (text, type = "info", results = null) => {
           if (!text) return;
-          state.notifications.unshift({
-            text,
-            type,
-            time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-          });
+          if (!["info", "success", "warning", "error"].includes(type)) type = "info";
+          const now = Date.now();
+          const previous = state.notifications[0];
+          const duplicate = !results && previous && !previous.results && previous.text === text && previous.type === type && now - previous.timestamp < 30000;
+          const item = duplicate ? state.notifications.shift() : {
+            id: ++notificationSequence, text, type, repeats: 0,
+            results: results ? results.map((row) => ({ ...row })) : null,
+          };
+          item.repeats++;
+          item.timestamp = now;
+          item.time = new Date(now).toLocaleString("vi-VN");
+          item.read = byId("notificationPopover").classList.contains("open");
+          state.notifications.unshift(item);
           state.notifications = state.notifications.slice(0, 100);
-          state.unreadNotifications += 1;
           renderNotifications();
+          if (duplicate) return;
           const toast = document.createElement("div");
-          toast.className = `toast ${type === "error" ? "error" : ""}`;
-          toast.textContent = text;
+          toast.className = `toast ${type}`;
+          toast.setAttribute("role", type === "error" ? "alert" : "status");
+          const content = document.createElement("span");
+          content.textContent = text;
+          const close = document.createElement("button");
+          close.type = "button";
+          close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+          close.setAttribute("aria-label", "Đóng thông báo");
+          close.setAttribute("title", "Đóng thông báo");
+          toast.append(content, close);
           byId("toastStack").appendChild(toast);
-          setTimeout(() => toast.remove(), 4200);
+          let remaining = type === "error" ? 10000 : type === "warning" ? 7000 : 4200;
+          let started, timer, paused = true;
+          const dismiss = () => { clearTimeout(timer); toast.remove(); };
+          const pause = () => {
+            if (paused) return;
+            paused = true; clearTimeout(timer); remaining -= Date.now() - started;
+          };
+          const resume = () => {
+            if (toast.matches(":hover") || toast.contains(document.activeElement)) return;
+            if (!paused) return;
+            paused = false;
+            started = Date.now(); timer = setTimeout(dismiss, Math.max(0, remaining));
+          };
+          close.addEventListener("click", dismiss);
+          toast.addEventListener("mouseenter", pause);
+          toast.addEventListener("mouseleave", resume);
+          toast.addEventListener("focusin", pause);
+          toast.addEventListener("focusout", resume);
+          resume();
+          while (byId("toastStack").children.length > 3) byId("toastStack").firstElementChild.remove();
         };
         const setNotice = (id, text, type = "info") => {
           const el = byId(id);
@@ -1863,27 +496,175 @@
             ? `${text.slice(0, maxLength)}...`
             : text;
         };
+        const operationLabels = { add: "Thêm thành viên", update: "Cập nhật quyền", remove: "Gỡ thành viên" };
         const setBusy = (busy) => {
           state.busy = busy;
           byId("connectButton").disabled = busy;
-          byId("addButton").disabled = busy || !canAdd();
+          byId("addButton").disabled = busy || !canRunMembership();
+          byId("addButtonLabel").textContent = busy
+            ? "Đang xử lý…"
+            : operationLabels[state.operation];
+          byId("membershipOperation").disabled = busy;
+          byId("addButtonIcon").className = busy ? "fa-solid fa-spinner fa-spin" : `fa-solid ${{ add: "fa-user-plus", update: "fa-user-pen", remove: "fa-user-minus" }[state.operation]}`;
+          document.querySelector(".selection-stack").inert = busy;
+          byId("assignmentTable").inert = busy;
+          byId("viewResults").disabled = busy;
+          updateClearSelectionButtons();
         };
-        const canAdd = () =>
+        const canRunMembership = () =>
+          !state.confirming &&
           state.connected &&
+          (state.operation === "add" || state.memberPickerStatus === "ready") &&
           state.selectedTeams.size &&
-          [...state.selectedTeams].every((teamId) => state.channelsByTeam.has(teamId)) &&
+          [...state.selectedTeams].every((teamId) =>
+            state.channelsByTeam.has(teamId),
+          ) &&
           state.users.size;
         const channelKey = (teamId, channelId) => `${teamId}|${channelId}`;
         const teamRoleKey = (teamId, userId) => `team|${teamId}|${userId}`;
         const channelRoleKey = (teamId, channelId, userId) =>
           `channel|${teamId}|${channelId}|${userId}`;
 
+        function updateClearSelectionButtons() {
+          const locked = state.busy || state.confirming;
+          byId("clearUserSelection").disabled = locked || !state.users.size;
+          byId("clearTeamSelection").disabled = locked || (!state.selectedTeams.size && !state.selectedChannels.size);
+        }
+        function clearUserSelection() {
+          if (state.busy || state.confirming) return;
+          clearTimeout(searchTimer);
+          state.directoryRequest++;
+          state.users.clear(); state.roles.clear();
+          byId("userSearch").value = "";
+          byId("userSuggestions").innerHTML = "";
+          renderUsers(); updateSummary();
+        }
+        function clearTeamSelection() {
+          if (state.busy || state.confirming) return;
+          state.selectedTeams.clear(); state.selectedChannels.clear();
+          state.roles.clear(); state.expandedChannels.clear();
+          state.activeTeamId = "";
+          byId("channelFilter").disabled = true;
+          byId("selectAllChannels").checked = false;
+          byId("selectAllChannels").indeterminate = false;
+          byId("selectAllChannels").disabled = true;
+          renderTeams(); renderChannels(); updateSummary();
+        }
+
+        function getMembershipScopes() {
+          return [...state.selectedTeams].flatMap((teamId) => {
+            const team = state.teams.find((item) => item.id === teamId);
+            const channels = (state.channelsByTeam.get(teamId) || []).filter((channel) => state.selectedChannels.has(channelKey(teamId, channel.id)));
+            return (channels.length ? channels : [null]).map((channel) => ({
+              teamId, channelId: channel?.id || "",
+              key: channel ? `channel|${teamId}|${channel.id}` : `team|${teamId}`,
+              label: `${team?.displayName || teamId} → ${channel?.displayName || "Team / Standard"}`,
+            }));
+          });
+        }
+        function usersForMembershipScope(teamId, channelId = "") {
+          const users = [...state.users.values()];
+          if (state.operation === "add") return users;
+          const key = channelId ? `channel|${teamId}|${channelId}` : `team|${teamId}`;
+          return users.filter((user) => state.existingMembers.get(user.id)?.memberships.some((membership) => membership.key === key));
+        }
+        function seedCurrentMemberRoles(user) {
+          for (const membership of user.memberships || []) {
+            const key = `${membership.key}|${user.id}`;
+            if (!state.roles.has(key)) state.roles.set(key, membership.role);
+          }
+        }
+        function renderMemberPicker() {
+          const picker = byId("memberPicker");
+          picker.hidden = state.operation === "add";
+          if (picker.hidden) return;
+          const box = byId("memberPickerList");
+          const query = byId("userSearch").value.trim().toLocaleLowerCase();
+          const users = [...state.existingMembers.values()].filter((user) =>
+            `${user.displayName} ${user.userPrincipalName} ${user.email} ${user.memberships.map((m) => `${m.label} ${m.role} ${m.isGuest ? "Guest" : ""}`).join(" ")}`.toLocaleLowerCase().includes(query),
+          ).sort((a, b) => a.displayName.localeCompare(b.displayName, "vi"));
+          byId("memberPickerCount").textContent = `${users.length} / ${state.existingMembers.size} thành viên`;
+          byId("refreshMembers").disabled = state.busy || state.memberPickerStatus === "loading";
+          if (!state.connected || !state.selectedTeams.size) {
+            box.innerHTML = '<div class="empty">Chọn Team để xem thành viên hiện tại.</div>';
+          } else if (state.memberPickerStatus === "loading") {
+            box.innerHTML = '<div class="loading">Đang tải thành viên và quyền hiện tại…</div>';
+          } else {
+            box.innerHTML = (state.memberPickerError ? `<div class="member-picker-error" role="alert">${escapeText(state.memberPickerError)}</div>` : "") +
+              (users.map((user) => `<label class="member-picker-row"><input type="checkbox" data-existing-user="${escapeText(user.id)}" ${state.users.has(user.id) ? "checked" : ""} ${state.memberPickerStatus !== "ready" ? "disabled" : ""}><span><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || user.id)}</small><span class="member-scope-badges">${user.memberships.map((membership) => `<span class="member-scope-badge ${membership.role === "owner" ? "owner" : ""}">${escapeText(membership.label)} · ${membership.role === "owner" ? "Owner" : membership.isGuest ? "Guest" : "Member"}</span>`).join("")}</span></span></label>`).join("") || '<div class="empty">Không có thành viên phù hợp trong phạm vi đã chọn.</div>');
+          }
+          box.querySelectorAll("[data-existing-user]").forEach((input) => input.addEventListener("change", () => {
+            const user = state.existingMembers.get(input.dataset.existingUser);
+            if (!user || state.busy || state.memberPickerStatus !== "ready") return;
+            if (input.checked) { state.users.set(user.id, user); seedCurrentMemberRoles(user); }
+            else {
+              state.users.delete(user.id);
+              for (const key of [...state.roles.keys()]) if (key.endsWith(`|${user.id}`)) state.roles.delete(key);
+            }
+            renderUsers(); updateSummary();
+          }));
+        }
+        function syncMemberPicker() {
+          byId("userPanel").classList.toggle("browsing-members", state.operation !== "add");
+          byId("userPanelTitle").textContent = state.operation === "add" ? "Chọn người dùng" : "Thành viên hiện tại";
+          byId("memberPicker").hidden = state.operation === "add";
+          byId("userSearch").placeholder = state.operation === "add" ? "Tìm người trong Microsoft 365…" : "Lọc thành viên theo tên, email, quyền…";
+          byId("userSearch").disabled = !state.connected || !state.selectedTeams.size;
+          if (state.operation === "add") return;
+          const scopes = getMembershipScopes();
+          const channelsReady = [...state.selectedTeams].every((id) => state.channelsByTeam.has(id));
+          const key = JSON.stringify([state.connected, channelsReady, scopes.map((scope) => scope.key).sort()]);
+          if (key === state.memberPickerKey) { renderMemberPicker(); return; }
+          state.memberPickerKey = key;
+          const requestId = ++state.memberPickerRequest;
+          state.memberPickerError = "";
+          state.existingMembers = new Map();
+          if (!state.connected || !scopes.length || !channelsReady) {
+            state.memberPickerStatus = channelsReady ? "idle" : "loading";
+            if (!scopes.length) { state.users.clear(); renderUsers(); }
+            renderMemberPicker(); return;
+          }
+          state.memberPickerStatus = "loading";
+          renderMemberPicker();
+          Promise.allSettled(scopes.map(async (scope) => {
+            const data = await api(`/api/membership-users?teamId=${encodeURIComponent(scope.teamId)}${scope.channelId ? `&channelId=${encodeURIComponent(scope.channelId)}` : ""}`);
+            return { scope, users: data.users || [] };
+          })).then((responses) => {
+            if (requestId !== state.memberPickerRequest || state.operation === "add") return;
+            const members = new Map(), errors = [];
+            responses.forEach((response, index) => {
+              if (response.status === "rejected") { errors.push(`${scopes[index].label}: ${response.reason.message}`); return; }
+              for (const user of response.value.users) {
+                if (!user.id) continue;
+                if (!members.has(user.id)) members.set(user.id, { ...user, memberships: [] });
+                members.get(user.id).memberships.push({ ...response.value.scope, role: user.role, isGuest: user.isGuest });
+              }
+            });
+            state.existingMembers = members;
+            state.memberPickerStatus = errors.length ? "error" : "ready";
+            state.memberPickerError = errors.length ? `Chưa tải đủ thành viên; chưa thể thực hiện thao tác. ${errors.join(" · ")}. Nhấn Tải lại; nếu vừa cập nhật, hãy khởi động lại ứng dụng.` : "";
+            if (!errors.length) {
+              const validRoleKeys = new Set();
+              for (const [id] of state.users) {
+                const user = members.get(id);
+                if (!user) { state.users.delete(id); continue; }
+                state.users.set(id, user); seedCurrentMemberRoles(user);
+                user.memberships.forEach((membership) => validRoleKeys.add(`${membership.key}|${id}`));
+              }
+              for (const key of [...state.roles.keys()]) if (!validRoleKeys.has(key)) state.roles.delete(key);
+            }
+            renderUsers(); updateSummary();
+          });
+        }
+
         function renderTeams() {
+          updateClearSelectionButtons();
           const query = byId("teamSearch").value.trim().toLocaleLowerCase();
           const teams = state.teams.filter((team) =>
             team.displayName.toLocaleLowerCase().includes(query),
           );
-          byId("teamCount").textContent = `${state.selectedTeams.size} đã chọn · ${teams.length} team`;
+          byId("teamCount").textContent =
+            `${state.selectedTeams.size} đã chọn · ${teams.length} team`;
           const list = byId("teamList");
           if (!teams.length) {
             list.innerHTML =
@@ -1893,12 +674,16 @@
           list.innerHTML = teams
             .map(
               (team) =>
-                `<div class="team-select-row ${team.id === state.activeTeamId ? "active" : ""}"><input type="checkbox" data-team-check="${escapeText(team.id)}" ${state.selectedTeams.has(team.id) ? "checked" : ""} aria-label="Chọn ${escapeText(team.displayName)}"><button class="team-open" type="button" data-team-open="${escapeText(team.id)}"><span class="row-main"><strong>${escapeText(team.displayName)}</strong><small>${escapeText(team.description || team.id)}</small></span></button><span class="arrow">›</span></div>`,
+                `<div class="team-select-row ${team.id === state.activeTeamId ? "active" : ""}"><input type="checkbox" data-team-check="${escapeText(team.id)}" ${state.selectedTeams.has(team.id) ? "checked" : ""} aria-label="Chọn ${escapeText(team.displayName)}"><button class="team-open" type="button" data-team-open="${escapeText(team.id)}"><span class="row-main"><strong>${escapeText(team.displayName)}</strong><small>${escapeText(team.description || team.id)}</small></span></button><i class="fa-solid fa-chevron-right arrow" aria-hidden="true"></i></div>`,
             )
             .join("");
-          list.querySelectorAll("[data-team-open]").forEach((button) =>
-            button.addEventListener("click", () => chooseTeam(button.dataset.teamOpen, true)),
-          );
+          list
+            .querySelectorAll("[data-team-open]")
+            .forEach((button) =>
+              button.addEventListener("click", () =>
+                chooseTeam(button.dataset.teamOpen, true),
+              ),
+            );
           list.querySelectorAll("[data-team-check]").forEach((input) =>
             input.addEventListener("change", () => {
               toggleTeam(input.dataset.teamCheck, input.checked);
@@ -1910,14 +695,18 @@
         function toggleTeam(teamId, selected) {
           if (selected) {
             state.selectedTeams.add(teamId);
-          }
-          else {
+          } else {
             state.selectedTeams.delete(teamId);
             for (const key of [...state.selectedChannels]) {
-              if (key.startsWith(`${teamId}|`)) state.selectedChannels.delete(key);
+              if (key.startsWith(`${teamId}|`))
+                state.selectedChannels.delete(key);
             }
             for (const key of [...state.roles.keys()]) {
-              if (key.startsWith(`team|${teamId}|`) || key.startsWith(`channel|${teamId}|`)) state.roles.delete(key);
+              if (
+                key.startsWith(`team|${teamId}|`) ||
+                key.startsWith(`channel|${teamId}|`)
+              )
+                state.roles.delete(key);
             }
           }
           renderTeams();
@@ -1965,7 +754,8 @@
                   ).toLowerCase();
                   const isPrivate = type === "private";
                   const checked =
-                    isPrivate && state.selectedChannels.has(channelKey(teamId, channel.id));
+                    isPrivate &&
+                    state.selectedChannels.has(channelKey(teamId, channel.id));
                   const typeLabel = isPrivate ? "Private" : "Standard";
                   const explanation = isPrivate
                     ? "Private channel"
@@ -1987,7 +777,11 @@
                 } else {
                   state.selectedChannels.delete(key);
                   for (const key of state.roles.keys()) {
-                    if (key.startsWith(`channel|${teamId}|${input.dataset.channel}|`))
+                    if (
+                      key.startsWith(
+                        `channel|${teamId}|${input.dataset.channel}|`,
+                      )
+                    )
                       state.roles.delete(key);
                   }
                   state.expandedChannels.delete(key);
@@ -2049,12 +843,13 @@
         }
 
         function renderUsers() {
+          updateClearSelectionButtons();
           const selected = [...state.users.values()];
           byId("userCount").textContent = `${selected.length} đã chọn`;
           byId("selectedUsers").innerHTML = selected
             .map(
               (user) =>
-                `<span class="chip"><span>${escapeText(user.displayName)} · ${escapeText(user.userPrincipalName || user.email)}</span><button type="button" aria-label="Bỏ ${escapeText(user.displayName)}" data-remove-user="${escapeText(user.id)}">×</button></span>`,
+                `<span class="chip"><span>${escapeText(user.displayName)} · ${escapeText(user.userPrincipalName || user.email)}</span><button type="button" aria-label="Bỏ ${escapeText(user.displayName)}" data-remove-user="${escapeText(user.id)}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></span>`,
             )
             .join("");
           byId("selectedUsers")
@@ -2062,70 +857,116 @@
             .forEach((button) =>
               button.addEventListener("click", () => {
                 for (const key of [...state.roles.keys()]) {
-                  if (key.endsWith(`|${button.dataset.removeUser}`)) state.roles.delete(key);
+                  if (key.endsWith(`|${button.dataset.removeUser}`))
+                    state.roles.delete(key);
                 }
                 state.users.delete(button.dataset.removeUser);
                 renderUsers();
                 updateSummary();
               }),
             );
+          renderMemberPicker();
         }
 
         function updateSummary() {
+          syncMemberPicker();
+          updateClearSelectionButtons();
+          byId("summaryTitle").textContent = { add: "Sẵn sàng thêm", update: "Cập nhật quyền", remove: "Gỡ thành viên" }[state.operation];
+          byId("summaryHelp").textContent = {
+            add: "Phân công theo Team / kênh · mặc định Member",
+            update: "Chọn quyền mới cho từng người đã là thành viên. Không tự thêm người chưa có.",
+            remove: "Có chọn private channel: chỉ gỡ khỏi kênh. Không chọn kênh: gỡ khỏi Team và mất quyền truy cập các kênh thuộc Team.",
+          }[state.operation];
+          byId("addButtonLabel").textContent = state.busy ? "Đang xử lý…" : operationLabels[state.operation];
+          byId("addButtonIcon").className = state.busy ? "fa-solid fa-spinner fa-spin" : `fa-solid ${{ add: "fa-user-plus", update: "fa-user-pen", remove: "fa-user-minus" }[state.operation]}`;
+          byId("addButton").classList.toggle("danger", state.operation === "remove");
           const chosenUsers = [...state.users.values()];
           const selectedTeamData = [...state.selectedTeams].map((teamId) => {
-            const team = state.teams.find((item) => item.id === teamId) || { id: teamId, displayName: teamId };
-            const channels = (state.channelsByTeam.get(teamId) || []).filter((channel) =>
-              state.selectedChannels.has(channelKey(teamId, channel.id)),
+            const team = state.teams.find((item) => item.id === teamId) || {
+              id: teamId,
+              displayName: teamId,
+            };
+            const channels = (state.channelsByTeam.get(teamId) || []).filter(
+              (channel) =>
+                state.selectedChannels.has(channelKey(teamId, channel.id)),
             );
             return { team, channels };
           });
-          const chosenChannelCount = selectedTeamData.reduce((sum, item) => sum + item.channels.length, 0);
+          const chosenChannelCount = selectedTeamData.reduce(
+            (sum, item) => sum + item.channels.length,
+            0,
+          );
           byId("selectedTeamCount").textContent = state.selectedTeams.size;
           byId("selectedChannelCount").textContent = chosenChannelCount;
           byId("selectedUserCount").textContent = chosenUsers.length;
           const table = byId("assignmentTable");
           if (!state.selectedTeams.size || !chosenUsers.length) {
             table.innerHTML =
-              '<div class="empty" style="min-height:80px;padding:0">Chọn ít nhất một team và một người dùng.</div>';
-            byId("addButton").disabled = state.busy || !canAdd();
+              '<div class="empty summary-empty">Chọn ít nhất một team và một người dùng.</div>';
+            byId("addButton").disabled = state.busy || !canRunMembership();
             return;
           }
 
-          table.innerHTML = selectedTeamData.map(({ team, channels }) => {
-            const teamGroupKey = `team-group|${team.id}`;
-            const teamOpen = state.expandedChannels.has(teamGroupKey);
-            const channelEntries = channels.length
-              ? channels.map((channel) => ({ channel, isTeamLevel: false }))
-              : [{ channel: { id: "__team__", displayName: "Team / Standard channels" }, isTeamLevel: true }];
-            const channelTables = channelEntries.map(({ channel, isTeamLevel }) => {
-              const sectionKey = isTeamLevel ? `team-section|${team.id}` : channelKey(team.id, channel.id);
-              const open = state.expandedChannels.has(sectionKey);
-              const ownerCount = chosenUsers.filter((user) => {
-                const key = isTeamLevel
-                  ? teamRoleKey(team.id, user.id)
-                  : channelRoleKey(team.id, channel.id, user.id);
-                return state.roles.get(key) === "owner";
-              }).length;
-              const rows = chosenUsers.map((user) => {
-                const roleKey = isTeamLevel
-                  ? teamRoleKey(team.id, user.id)
-                  : channelRoleKey(team.id, channel.id, user.id);
-                const role = state.roles.get(roleKey) || "member";
-                const attributes = isTeamLevel
-                  ? `data-team-role-team="${escapeText(team.id)}" data-team-role-user="${escapeText(user.id)}"`
-                  : `data-channel-role-team="${escapeText(team.id)}" data-channel-role-channel="${escapeText(channel.id)}" data-channel-role-user="${escapeText(user.id)}"`;
-                return `<div class="assignment-row"><div class="assignment-person"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email)}</small></div><select class="role-select" ${attributes}><option value="member" ${role === "member" ? "selected" : ""}>Member</option><option value="owner" ${role === "owner" ? "selected" : ""}>Owner</option></select></div>`;
-              }).join("");
-              return `<section class="assignment-channel ${open ? "open" : ""}"><button class="assignment-channel-head" type="button" data-toggle-section="${escapeText(sectionKey)}"><span>${escapeText(channel.displayName)}</span><span class="count">${chosenUsers.length} người · ${ownerCount} owner &nbsp; ${open ? "⌃" : "⌄"}</span></button><div class="assignment-channel-body">${rows}</div></section>`;
-            }).join("");
-            return `<section class="assignment-team ${teamOpen ? "open" : ""}"><button class="assignment-team-head" type="button" data-toggle-team-group="${escapeText(teamGroupKey)}"><span>${escapeText(team.displayName)}</span><span class="count">${channelEntries.length} mục · ${chosenUsers.length} người &nbsp; ${teamOpen ? "⌃" : "⌄"}</span></button><div class="assignment-team-body">${channelTables}</div></section>`;
-          }).join("");
+          table.innerHTML = selectedTeamData
+            .map(({ team, channels }) => {
+              const teamUsers = state.operation === "add" ? chosenUsers : chosenUsers.filter((user) => state.existingMembers.get(user.id)?.memberships.some((membership) => membership.teamId === team.id));
+              if (!teamUsers.length) return "";
+              const teamGroupKey = `team-group|${team.id}`;
+              const teamOpen = state.expandedChannels.has(teamGroupKey);
+              const channelEntries = channels.length
+                ? channels.map((channel) => ({ channel, isTeamLevel: false }))
+                : [
+                    {
+                      channel: {
+                        id: "__team__",
+                        displayName: "Team / Standard channels",
+                      },
+                      isTeamLevel: true,
+                    },
+                  ];
+              const channelTables = channelEntries
+                .map(({ channel, isTeamLevel }) => {
+                  const scopeUsers = usersForMembershipScope(team.id, isTeamLevel ? "" : channel.id);
+                  if (!scopeUsers.length) return "";
+                  const sectionKey = isTeamLevel
+                    ? `team-section|${team.id}`
+                    : channelKey(team.id, channel.id);
+                  const open = state.expandedChannels.has(sectionKey);
+                  const ownerCount = scopeUsers.filter((user) => {
+                    const key = isTeamLevel
+                      ? teamRoleKey(team.id, user.id)
+                      : channelRoleKey(team.id, channel.id, user.id);
+                    return state.roles.get(key) === "owner";
+                  }).length;
+                  const rows = scopeUsers
+                    .map((user) => {
+                      const roleKey = isTeamLevel
+                        ? teamRoleKey(team.id, user.id)
+                        : channelRoleKey(team.id, channel.id, user.id);
+                      const role = state.roles.get(roleKey) || "member";
+                      const attributes = isTeamLevel
+                        ? `data-team-role-team="${escapeText(team.id)}" data-team-role-user="${escapeText(user.id)}"`
+                        : `data-channel-role-team="${escapeText(team.id)}" data-channel-role-channel="${escapeText(channel.id)}" data-channel-role-user="${escapeText(user.id)}"`;
+                      const current = state.existingMembers.get(user.id)?.memberships.find((membership) => membership.key === (isTeamLevel ? `team|${team.id}` : `channel|${team.id}|${channel.id}`));
+                      const currentRole = current ? `<small>Hiện tại: ${current.role === "owner" ? "Owner" : current.isGuest ? "Guest" : "Member"}</small>` : "";
+                      const roleControl = state.operation === "remove"
+                        ? '<span class="remove-badge">Gỡ khỏi phạm vi này</span>'
+                        : `<select class="role-select" ${attributes} aria-label="Quyền của ${escapeText(user.displayName)}"><option value="member" ${role === "member" ? "selected" : ""}>Member</option><option value="owner" ${role === "owner" ? "selected" : ""}>Owner</option></select>`;
+                      return `<div class="assignment-row"><div class="assignment-person"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email)}</small>${currentRole}</div>${roleControl}</div>`;
+                    })
+                    .join("");
+                  return `<section class="assignment-channel ${open ? "open" : ""}"><button class="assignment-channel-head" type="button" data-toggle-section="${escapeText(sectionKey)}"><span>${escapeText(channel.displayName)}</span><span class="count">${scopeUsers.length} người${state.operation === "remove" ? " · gỡ" : ` · ${ownerCount} owner`} &nbsp; <i class="fa-solid ${open ? "fa-chevron-up" : "fa-chevron-down"}" aria-hidden="true"></i></span></button><div class="assignment-channel-body">${rows}</div></section>`;
+                })
+                .join("");
+              return `<section class="assignment-team ${teamOpen ? "open" : ""}"><button class="assignment-team-head" type="button" data-toggle-team-group="${escapeText(teamGroupKey)}"><span>${escapeText(team.displayName)}</span><span class="count">${channelEntries.length} mục · ${teamUsers.length} người &nbsp; <i class="fa-solid ${teamOpen ? "fa-chevron-up" : "fa-chevron-down"}" aria-hidden="true"></i></span></button><div class="assignment-team-body">${channelTables}</div></section>`;
+            })
+            .join("");
 
           table.querySelectorAll("[data-toggle-team-group]").forEach((button) =>
             button.addEventListener("click", () => {
               const key = button.dataset.toggleTeamGroup;
-              if (state.expandedChannels.has(key)) state.expandedChannels.delete(key);
+              if (state.expandedChannels.has(key))
+                state.expandedChannels.delete(key);
               else state.expandedChannels.add(key);
               updateSummary();
             }),
@@ -2134,24 +975,47 @@
           table.querySelectorAll("[data-toggle-section]").forEach((button) =>
             button.addEventListener("click", () => {
               const key = button.dataset.toggleSection;
-              if (state.expandedChannels.has(key)) state.expandedChannels.delete(key);
+              if (state.expandedChannels.has(key))
+                state.expandedChannels.delete(key);
               else state.expandedChannels.add(key);
               updateSummary();
             }),
           );
-          table.querySelectorAll("[data-team-role-user]").forEach((select) =>
-            select.addEventListener("change", () => state.roles.set(teamRoleKey(select.dataset.teamRoleTeam, select.dataset.teamRoleUser), select.value)),
-          );
+          table
+            .querySelectorAll("[data-team-role-user]")
+            .forEach((select) =>
+              select.addEventListener("change", () =>
+                state.roles.set(
+                  teamRoleKey(
+                    select.dataset.teamRoleTeam,
+                    select.dataset.teamRoleUser,
+                  ),
+                  select.value,
+                ),
+              ),
+            );
           table.querySelectorAll("[data-channel-role-user]").forEach((select) =>
             select.addEventListener("change", () => {
-              state.roles.set(channelRoleKey(select.dataset.channelRoleTeam, select.dataset.channelRoleChannel, select.dataset.channelRoleUser), select.value);
+              state.roles.set(
+                channelRoleKey(
+                  select.dataset.channelRoleTeam,
+                  select.dataset.channelRoleChannel,
+                  select.dataset.channelRoleUser,
+                ),
+                select.value,
+              );
               updateSummary();
             }),
           );
-          byId("addButton").disabled = state.busy || !canAdd();
+          byId("addButton").disabled = state.busy || !canRunMembership();
         }
 
         async function searchUsers() {
+          if (state.operation !== "add") {
+            byId("userSuggestions").innerHTML = "";
+            renderMemberPicker(); return;
+          }
+          const requestId = ++state.directoryRequest;
           const query = byId("userSearch").value.trim();
           const box = byId("userSuggestions");
           if (query.length < 2) {
@@ -2161,6 +1025,7 @@
           box.innerHTML = '<div class="loading">Đang tìm người dùng...</div>';
           try {
             const data = await api(`/api/users?q=${encodeURIComponent(query)}`);
+            if (requestId !== state.directoryRequest || state.operation !== "add" || byId("userSearch").value.trim() !== query) return;
             const users = (data.users || []).filter(
               (user) => !state.users.has(user.id),
             );
@@ -2185,29 +1050,178 @@
               }),
             );
           } catch (error) {
+            if (requestId !== state.directoryRequest || state.operation !== "add") return;
             box.innerHTML = `<div class="empty">${escapeText(error.message)}</div>`;
           }
         }
 
-        function renderResults(results) {
-          const container = byId("results");
-          container.className = "results show";
-          container.innerHTML =
-            '<p class="summary-label">Kết quả xử lý</p>' +
-            results
-              .map((result) => {
-                const statusClass =
-                  result.status === "Added" || result.status === "Updated"
-                    ? "added"
-                    : result.status === "Error" ||
-                        result.status === "NotInTeam" ||
-                        result.status === "TeamAddError"
-                      ? "error"
-                      : "";
-                return `<div class="result-row"><span>${escapeText(result.user)} <span style="color:#8a9792">→</span> ${escapeText(result.channel)}</span><span class="status ${statusClass}">${escapeText(result.status)}</span><small>${escapeText(result.detail)}</small></div>`;
-              })
-              .join("");
+        let lastResults = [];
+        let displayedResults = [];
+        let resultFilter = "all";
+        const resultKind = (item) =>
+          ["Added", "Updated", "Removed"].includes(item.status)
+            ? "success"
+            : ["Error", "TeamAddError", "NotInTeam", "NotMember"].includes(item.status)
+              ? "error"
+              : "skipped";
+        function notifyMemberResult(item) {
+          const label = { Added: "Đã thêm", Updated: "Đã cập nhật quyền", Removed: "Đã gỡ", AlreadyAbsent: "Đã vắng mặt", Unchanged: "Quyền không đổi", AlreadyMember: "Đã có sẵn", Skipped: "Đã bỏ qua" }[item.status] || "Thất bại";
+          const type = resultKind(item) === "error" ? "error" : resultKind(item) === "success" ? "success" : "info";
+          const commands = (item.trace || []).filter((step) => step.command).length;
+          notify(`${label}: ${item.channel} → ${item.user}${item.role ? ` · ${item.role === "owner" ? "Owner" : "Member"}` : ""}. ${commands ? `Đã chạy ${commands} lệnh; xem chi tiết để theo dõi thứ tự.` : "Chưa có lệnh Graph được ghi nhận."}${type === "error" ? ` Lỗi: ${item.detail}` : ""}`, type, [item]);
         }
+        const renderTrace = (trace) => trace?.length
+          ? `<section class="execution-trace"><h3>Thứ tự thực thi trên máy chủ</h3><p>Các lệnh Graph và bước xử lý của yêu cầu này, theo thứ tự thực tế. Không chứa thông tin xác thực.</p><ol>${trace.map((step) => `<li class="trace-step ${step.status === "error" ? "error" : ""}"><div><strong>${step.status === "error" ? "Lỗi" : step.status === "success" ? "Thành công" : "Kiểm tra"}</strong> · <time>${escapeText(new Date(step.time).toLocaleString("vi-VN"))}</time></div>${step.command ? `<pre><code>${escapeText(step.command)}</code></pre>` : ""}<p>${escapeText(step.detail)}</p></li>`).join("")}</ol></section>`
+          : '<p class="trace-empty">Không có nhật ký lệnh máy chủ cho mục này; không thể xác định lệnh Graph đã chạy nếu yêu cầu mất kết nối.</p>';
+        function renderResults(results) {
+          displayedResults = results;
+          const counts = {
+            all: results.length,
+            success: 0,
+            error: 0,
+            skipped: 0,
+          };
+          results.forEach((item) => counts[resultKind(item)]++);
+          byId("resultTotals").textContent =
+            counts.success +
+            " thành công · " +
+            counts.error +
+            " lỗi · " +
+            counts.skipped +
+            " bỏ qua / đã có";
+          byId("resultTitle").textContent = counts.error
+            ? "Hoàn tất — có lỗi cần kiểm tra"
+            : "Hoàn tất xử lý";
+          byId("resultFilters")
+            .querySelectorAll("button")
+            .forEach((button) => {
+              button.setAttribute(
+                "aria-pressed",
+                String(button.dataset.filter === resultFilter),
+              );
+              const labels = {
+                all: "Tất cả",
+                success: "Thành công",
+                error: "Lỗi",
+                skipped: "Bỏ qua",
+              };
+              button.textContent =
+                labels[button.dataset.filter] +
+                " (" +
+                counts[button.dataset.filter] +
+                ")";
+            });
+          const labels = {
+            Added: "Đã thêm",
+            Updated: "Đã cập nhật",
+            Removed: "Đã gỡ",
+            AlreadyAbsent: "Không thuộc phạm vi này",
+            Unchanged: "Quyền không đổi",
+            NotMember: "Chưa là thành viên",
+            AlreadyMember: "Đã là thành viên",
+            Error: "Lỗi",
+            TeamAddError: "Lỗi thêm vào Team",
+            NotInTeam: "Chưa thuộc Team",
+            Skipped: "Đã bỏ qua",
+          };
+          byId("resultList").innerHTML =
+            results
+              .filter(
+                (item) =>
+                  resultFilter === "all" || resultKind(item) === resultFilter,
+              )
+              .map(
+                (item) =>
+                  '<div class="result-row"><strong>' +
+                  escapeText(item.channel) +
+                  " → " +
+                  escapeText(item.user) +
+                  (item.role ? " → " + (item.role === "owner" ? "Owner" : "Member") : "") +
+                  '</strong><span class="status ' +
+                  (resultKind(item) === "error"
+                    ? "error"
+                    : resultKind(item) === "success"
+                      ? "added"
+                      : "") +
+                  '">' +
+                  escapeText(labels[item.status] || item.status) +
+                  "</span><small>" +
+                  escapeText(item.detail) +
+                  "</small>" + renderTrace(item.trace) + "</div>",
+              )
+              .join("") ||
+            '<div class="empty">Không có kết quả trong nhóm này.</div>';
+          byId("viewResults").hidden = false;
+        }
+        function showResults(results = lastResults, historical = false) {
+          resultFilter = results.some(
+            (item) => resultKind(item) === "error",
+          )
+            ? "error"
+            : "all";
+          renderResults(results);
+          byId("resultReset").hidden = historical;
+          byId("resultKeep").textContent = "Đóng báo cáo";
+          byId("resultDialog").showModal();
+          byId("resultTitle").focus();
+        }
+        byId("resultFilters").addEventListener("click", (event) => {
+          const button = event.target.closest("[data-filter]");
+          if (button) {
+            resultFilter = button.dataset.filter;
+            renderResults(displayedResults);
+          }
+        });
+        byId("viewResults").addEventListener("click", () => showResults());
+        const keepResults = () => byId("resultDialog").close();
+        byId("resultKeep").addEventListener("click", keepResults);
+        byId("resultClose").addEventListener("click", keepResults);
+        byId("resultDialog").addEventListener("click", (event) => {
+          if (event.target !== byId("resultDialog")) return;
+          const rect = event.target.getBoundingClientRect();
+          if (
+            event.clientX < rect.left ||
+            event.clientX > rect.right ||
+            event.clientY < rect.top ||
+            event.clientY > rect.bottom
+          )
+            keepResults();
+        });
+        byId("resultReset").addEventListener("click", async () => {
+          keepResults();
+          clearTimeout(searchTimer);
+          state.activeTeamId = "";
+          state.selectedTeams.clear();
+          state.selectedChannels.clear();
+          state.channelsByTeam.clear();
+          state.users.clear();
+          state.roles.clear();
+          state.expandedChannels.clear();
+          byId("teamSearch").value = "";
+          byId("userSearch").value = "";
+          byId("userSearch").disabled = true;
+          byId("userSuggestions").innerHTML = "";
+          byId("channelFilter").value = "all";
+          byId("channelFilter").disabled = true;
+          byId("selectAllChannels").checked = false;
+          byId("selectAllChannels").disabled = true;
+          byId("operationProgress").hidden = true;
+          byId("viewResults").hidden = true;
+          byId("channelTitle").textContent = "Channels";
+          lastResults = [];
+          renderTeams();
+          renderChannels();
+          renderUsers();
+          updateSummary();
+          setBusy(true);
+          try {
+            await loadTeams();
+          } catch (error) {
+            notify(error.message, "error");
+          } finally {
+            setBusy(false);
+          }
+        });
 
         function askInAppModal({
           title,
@@ -2217,6 +1231,7 @@
           items,
           acceptText,
           cancelText = "Hủy",
+          danger = false,
         }) {
           const modal = byId("teamConfirmModal");
           const list = byId("teamMissingUsers");
@@ -2226,6 +1241,7 @@
           byId("teamModalListLabel").textContent = listLabel;
           byId("teamModalCount").textContent = `${items.length} mục`;
           byId("teamModalAccept").textContent = acceptText;
+          byId("teamModalAccept").classList.toggle("danger", danger);
           byId("teamModalCancel").textContent = cancelText;
           list.innerHTML = items
             .map((item) => {
@@ -2241,7 +1257,11 @@
             .join("");
           modal.classList.add("open");
           modal.setAttribute("aria-hidden", "false");
-          byId("teamModalAccept").focus();
+          const previousFocus = document.activeElement;
+          const shell = document.querySelector(".shell");
+          const previousInert = shell.inert;
+          shell.inert = true;
+          byId(danger ? "teamModalCancel" : "teamModalAccept").focus();
 
           return new Promise((resolve) => {
             const finish = (accepted) => {
@@ -2252,6 +1272,8 @@
               byId("teamModalClose").removeEventListener("click", cancel);
               modal.removeEventListener("click", backdropCancel);
               document.removeEventListener("keydown", escapeCancel);
+              shell.inert = previousInert;
+              if (previousFocus?.isConnected) previousFocus.focus();
               resolve(accepted);
             };
             const accept = () => finish(true);
@@ -2261,6 +1283,15 @@
             };
             const escapeCancel = (event) => {
               if (event.key === "Escape") cancel();
+              if (event.key === "Tab") {
+                const buttons = [...modal.querySelectorAll("button:not(:disabled)")];
+                const first = buttons[0], last = buttons[buttons.length - 1];
+                if (event.shiftKey && (document.activeElement === first || !modal.contains(document.activeElement))) {
+                  event.preventDefault(); last.focus();
+                } else if (!event.shiftKey && (document.activeElement === last || !modal.contains(document.activeElement))) {
+                  event.preventDefault(); first.focus();
+                }
+              }
             };
             byId("teamModalAccept").addEventListener("click", accept);
             byId("teamModalCancel").addEventListener("click", cancel);
@@ -2276,7 +1307,9 @@
           taskPanel.classList.remove("open");
           taskbarButton.setAttribute("aria-expanded", "false");
         };
-        const notificationCenter = document.querySelector(".notification-center");
+        const notificationCenter = document.querySelector(
+          ".notification-center",
+        );
         const notificationButton = byId("notificationButton");
         const notificationDrawer = byId("notificationPopover");
         const notificationBackdrop = byId("notificationBackdrop");
@@ -2294,7 +1327,7 @@
           notificationBackdrop.setAttribute("aria-hidden", "false");
           notificationCenter.classList.add("drawer-open");
           notificationButton.setAttribute("aria-expanded", "true");
-          state.unreadNotifications = 0;
+          state.notifications.forEach((item) => { item.read = true; });
           renderNotifications();
           byId("closeNotifications").focus();
         };
@@ -2310,7 +1343,10 @@
           byId("teamPanel").querySelector("input, button")?.focus();
         });
         byId("passwordTaskButton").addEventListener("click", () => {
-          notify("Chức năng reset mật khẩu sẽ được bổ sung ở bước tiếp theo.", "info");
+          notify(
+            "Chức năng reset mật khẩu sẽ được bổ sung ở bước tiếp theo.",
+            "info",
+          );
         });
 
         notificationButton.addEventListener("click", (event) => {
@@ -2318,18 +1354,46 @@
           closeTaskPanel();
           openNotificationDrawer();
         });
-        notificationDrawer.addEventListener("click", (event) => event.stopPropagation());
-        notificationBackdrop.addEventListener("click", () => closeNotificationDrawer(true));
-        byId("closeNotifications").addEventListener("click", () => closeNotificationDrawer(true));
+        notificationDrawer.addEventListener("click", (event) =>
+          event.stopPropagation(),
+        );
+        byId("notificationList").addEventListener("click", (event) => {
+          const button = event.target.closest("[data-report]");
+          if (!button) return;
+          const item = state.notifications.find((entry) => entry.id === Number(button.dataset.report));
+          if (item?.results) {
+            showResults(item.results, true);
+            byId("resultTitle").textContent += ` · ${item.time}`;
+          }
+        });
+        notificationBackdrop.addEventListener("click", () =>
+          closeNotificationDrawer(true),
+        );
+        byId("closeNotifications").addEventListener("click", () =>
+          closeNotificationDrawer(true),
+        );
         byId("clearNotifications").addEventListener("click", () => {
           state.notifications = [];
-          state.unreadNotifications = 0;
           renderNotifications();
         });
         document.addEventListener("click", (event) => {
-          if (!event.target.closest("#connectPanel") && !event.target.closest("#taskbarButton")) closeTaskPanel();
+          if (
+            !event.target.closest("#connectPanel") &&
+            !event.target.closest("#taskbarButton")
+          )
+            closeTaskPanel();
         });
         document.addEventListener("keydown", (event) => {
+          if (byId("resultDialog").open) return;
+          if (notificationDrawer.classList.contains("open") && event.key === "Tab") {
+            const buttons = [...notificationDrawer.querySelectorAll("button:not(:disabled)")];
+            const first = buttons[0], last = buttons[buttons.length - 1];
+            if (event.shiftKey && (document.activeElement === first || !notificationDrawer.contains(document.activeElement))) {
+              event.preventDefault(); last.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || !notificationDrawer.contains(document.activeElement))) {
+              event.preventDefault(); first.focus();
+            }
+          }
           if (event.key !== "Escape") return;
           closeTaskPanel();
           closeNotificationDrawer(true);
@@ -2338,36 +1402,54 @@
         async function checkForUpdates(showCurrentToast = true) {
           const button = byId("updateButton");
           button.disabled = true;
-          button.textContent = "Đang kiểm tra…";
+          byId("updateButtonLabel").textContent = "Đang kiểm tra…";
           try {
             const status = await api("/api/update/status");
-            button.textContent = `v${status.currentVersion}`;
-            button.classList.toggle("available", Boolean(status.updateAvailable));
+            byId("updateButtonLabel").textContent = `v${status.currentVersion}`;
+            button.classList.toggle(
+              "available",
+              Boolean(status.updateAvailable),
+            );
             if (!status.updateAvailable) {
-              if (showCurrentToast) notify(`Bạn đang dùng phiên bản mới nhất v${status.currentVersion}.`, "info");
+              if (showCurrentToast)
+                notify(
+                  `Bạn đang dùng phiên bản mới nhất v${status.currentVersion}.`,
+                  "info",
+                );
               return;
             }
-            button.textContent = `Cập nhật v${status.latestVersion}`;
+            byId("updateButtonLabel").textContent = `Cập nhật v${status.latestVersion}`;
             const accepted = await askInAppModal({
               title: "Có phiên bản mới",
               description: `Phiên bản hiện tại v${status.currentVersion} · phiên bản mới v${status.latestVersion}`,
-              warning: "Ứng dụng sẽ sao lưu bản hiện tại, tải mã nguồn từ GitHub, cập nhật các file chương trình và tự khởi động lại.",
+              warning:
+                "Ứng dụng sẽ sao lưu bản hiện tại, tải mã nguồn từ GitHub, cập nhật các file chương trình và tự khởi động lại.",
               listLabel: "Nguồn cập nhật",
-              items: [{ title: status.repository, subtitle: "Nhánh main · GitHub public" }],
+              items: [
+                {
+                  title: status.repository,
+                  subtitle: "Nhánh main · GitHub public",
+                },
+              ],
               acceptText: "Cập nhật ngay",
               cancelText: "Để sau",
             });
             if (!accepted) return;
-            notify(`Đang cập nhật lên v${status.latestVersion}. Ứng dụng sẽ tự mở lại.`, "info");
+            notify(
+              `Đang cập nhật lên v${status.latestVersion}. Ứng dụng sẽ tự mở lại.`,
+              "info",
+            );
             await api("/api/update/apply", { method: "POST", body: "{}" });
           } catch (error) {
-            button.textContent = "Kiểm tra cập nhật";
+            byId("updateButtonLabel").textContent = "Kiểm tra cập nhật";
             notify(`Không thể kiểm tra cập nhật: ${error.message}`, "error");
           } finally {
             button.disabled = false;
           }
         }
-        byId("updateButton").addEventListener("click", () => checkForUpdates(true));
+        byId("updateButton").addEventListener("click", () =>
+          checkForUpdates(true),
+        );
 
         byId("connectButton").addEventListener("click", async () => {
           if (state.connected) {
@@ -2394,13 +1476,13 @@
             byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
             byId("connectDescription").textContent =
               `Tenant: ${data.tenantId || "đã xác thực"}`;
-            byId("connectButton").textContent = "Ngắt kết nối";
+            byId("connectButtonLabel").textContent = "Ngắt kết nối";
             byId("connectButton").classList.remove("primary");
             byId("connectButton").classList.add("secondary");
             setNotice(
               "connectNotice",
               "Kết nối thành công. Đang tải các team bạn tham gia.",
-              "info",
+              "success",
             );
             await loadTeams();
           } catch (error) {
@@ -2432,7 +1514,7 @@
           byId("connectTitle").textContent = "Chưa kết nối tài khoản";
           byId("connectDescription").textContent =
             "Kết nối để tải team và thành viên từ Microsoft Graph.";
-          byId("connectButton").textContent = "Kết nối tài khoản";
+          byId("connectButtonLabel").textContent = "Kết nối tài khoản";
           byId("connectButton").classList.add("primary");
           byId("connectButton").classList.remove("secondary");
           byId("connectButton").onclick = null;
@@ -2453,6 +1535,8 @@
         }
 
         byId("teamSearch").addEventListener("input", renderTeams);
+        byId("clearTeamSelection").addEventListener("click", clearTeamSelection);
+        byId("clearUserSelection").addEventListener("click", clearUserSelection);
         byId("channelFilter").addEventListener("change", renderChannels);
         byId("selectAllChannels").addEventListener("change", () => {
           const teamId = state.activeTeamId;
@@ -2465,11 +1549,14 @@
               if (checked) {
                 state.selectedTeams.add(teamId);
                 state.selectedChannels.add(key);
-              }
-              else {
+              } else {
                 state.selectedChannels.delete(key);
                 for (const key of state.roles.keys()) {
-                  if (key.startsWith(`channel|${teamId}|${input.dataset.channel}|`))
+                  if (
+                    key.startsWith(
+                      `channel|${teamId}|${input.dataset.channel}|`,
+                    )
+                  )
                     state.roles.delete(key);
                 }
                 state.expandedChannels.delete(key);
@@ -2489,255 +1576,311 @@
             byId("userSuggestions").innerHTML = "";
         });
 
-        async function runMultiTeamAdd() {
+        byId("membershipOperation").addEventListener("change", () => {
+          if (state.busy) return;
+          state.operation = byId("membershipOperation").value;
+          state.users.clear(); state.roles.clear();
+          state.existingMembers.clear(); state.memberPickerKey = "";
+          state.memberPickerRequest++; state.directoryRequest++;
+          byId("userSearch").value = "";
+          byId("userSuggestions").innerHTML = "";
+          renderUsers();
+          updateSummary();
+        });
+        byId("refreshMembers").addEventListener("click", () => {
+          if (state.busy) return;
+          state.memberPickerKey = "";
+          updateSummary();
+        });
+
+        async function runMembershipOperation() {
+          const operation = state.operation;
+          const selectedRoles = new Map(state.roles);
+          if (operation !== "add") {
+            const status = await api("/api/status");
+            if (!status.membershipOperations?.includes(operation)) {
+              notify("Server đang chạy chưa hỗ trợ thao tác này. Đóng cửa sổ PowerShell cũ và mở lại launcher trước khi tiếp tục.", "error");
+              return;
+            }
+          }
           const selectedUsers = [...state.users.values()];
           const operations = [...state.selectedTeams].map((teamId) => {
-            const team = state.teams.find((item) => item.id === teamId) || { id: teamId, displayName: teamId };
-            const channels = (state.channelsByTeam.get(teamId) || []).filter((channel) =>
-              state.selectedChannels.has(channelKey(teamId, channel.id)),
+            const team = state.teams.find((item) => item.id === teamId) || {
+              id: teamId,
+              displayName: teamId,
+            };
+            const channels = (state.channelsByTeam.get(teamId) || []).filter(
+              (channel) =>
+                state.selectedChannels.has(channelKey(teamId, channel.id)),
             );
-            return { team, channels };
-          });
-          const confirmationItems = operations.flatMap(({ team, channels }) =>
+            const scopeUsers = new Map((channels.length ? channels : [null]).map((channel) => [channel?.id || "", usersForMembershipScope(teamId, channel?.id || "")]));
+            return { team, channels: channels.filter((channel) => scopeUsers.get(channel.id).length), scopeUsers };
+          }).filter(({ scopeUsers }) => [...scopeUsers.values()].some((users) => users.length));
+          if (!operations.length) { notify("Chọn thành viên thuộc phạm vi cần xử lý.", "info"); return; }
+          const confirmationItems = operations.flatMap(({ team, channels, scopeUsers }) =>
             channels.length
-              ? channels.flatMap((channel) => selectedUsers.map((user) => ({
-                  title: `${team.displayName} / ${channel.displayName}`,
-                  subtitle: `${user.displayName} · ${user.userPrincipalName || user.email}`,
-                  badge: state.roles.get(channelRoleKey(team.id, channel.id, user.id)) === "owner" ? "Owner" : "Member",
-                })))
-              : selectedUsers.map((user) => ({
+              ? channels.flatMap((channel) =>
+                  scopeUsers.get(channel.id).map((user) => ({
+                    title: `${team.displayName} / ${channel.displayName}`,
+                    subtitle: `${user.displayName} · ${user.userPrincipalName || user.email}`,
+                    badge: operation === "remove" ? "Gỡ khỏi kênh" :
+                      selectedRoles.get(
+                        channelRoleKey(team.id, channel.id, user.id),
+                      ) === "owner"
+                        ? "Owner"
+                        : "Member",
+                  })),
+                )
+              : scopeUsers.get("").map((user) => ({
                   title: `${team.displayName} · Team/Standard`,
                   subtitle: `${user.displayName} · ${user.userPrincipalName || user.email}`,
-                  badge: state.roles.get(teamRoleKey(team.id, user.id)) === "owner" ? "Owner" : "Member",
+                  badge: operation === "remove" ? "Gỡ khỏi Team" :
+                    selectedRoles.get(teamRoleKey(team.id, user.id)) === "owner"
+                      ? "Owner"
+                      : "Member",
                 })),
           );
           const shouldProceed = await askInAppModal({
-            title: "Xác nhận phân công nhiều team",
+            title: { add: "Xác nhận thêm thành viên", update: "Xác nhận cập nhật quyền", remove: "Xác nhận gỡ thành viên" }[operation],
             description: `${operations.length} team · ${selectedUsers.length} người · ${confirmationItems.length} phân công`,
-            warning: "Team không chọn private channel sẽ chạy luồng Team/Standard. Team có private channel sẽ kiểm tra thành viên Team cha trước khi thêm vào kênh riêng.",
-            listLabel: "Team / Channel · Người dùng · Quyền",
+            warning: {
+              add: "Team không chọn private channel sẽ chạy luồng Team/Standard. Team có private channel sẽ kiểm tra thành viên Team cha trước khi thêm vào kênh riêng.",
+              update: "Chỉ đổi quyền tại phạm vi được liệt kê. Người chưa là thành viên sẽ báo lỗi, không tự động được thêm. Không thể hạ quyền Owner cuối cùng.",
+              remove: "Không chọn kênh trong Team: gỡ khỏi Team, ảnh hưởng quyền truy cập Team và các kênh thuộc Team. Có chọn private channel: chỉ gỡ khỏi các kênh đã chọn, giữ thành viên Team cha. Không thể gỡ Owner cuối cùng. Đóng báo cáo không hoàn tác thao tác.",
+            }[operation],
+            listLabel: operation === "remove" ? "Phạm vi sẽ gỡ · Người dùng" : "Team / Channel · Người dùng · Quyền mới",
             items: confirmationItems,
-            acceptText: "Xác nhận thêm",
+            acceptText: operationLabels[operation],
+            danger: operation === "remove",
           });
           if (!shouldProceed) return;
 
           setBusy(true);
-          notify(`Bắt đầu xử lý ${operations.length} team.`, "info");
           const allResults = [];
+          let completedChannels = 0,
+            completedTeams = 0;
+          const totalChannels = operations.reduce(
+            (sum, op) => sum + op.channels.length,
+            0,
+          );
+          const totalUnits = operations.reduce(
+            (sum, op) => sum + (op.channels.length || 1),
+            0,
+          );
+          let completedUnits = 0;
+          const progress = (detail) => {
+            byId("operationProgress").hidden = false;
+            byId("progressBar").max = totalUnits;
+            byId("progressBar").value = completedUnits;
+            byId("progressLabel").textContent =
+              "Đã xử lý " +
+              (totalChannels
+                ? completedChannels + "/" + totalChannels + " kênh · "
+                : "") +
+              completedTeams +
+              "/" +
+              operations.length +
+              " Team";
+            byId("progressDetail").textContent = detail;
+          };
+          const requestMembers = (body) =>
+            api("/api/members", { method: "POST", body: JSON.stringify(body) });
+          progress("Đang kiểm tra thành viên Team cha…");
           try {
-            for (const { team, channels } of operations) {
-              const memberRequest = {
+            for (const { team, channels, scopeUsers } of operations) {
+              const teamUsers = [...new Map([...scopeUsers.values()].flat().map((user) => [user.id, user])).values()];
+              const base = {
+                operation,
+                confirmed: true,
                 teamId: team.id,
-                users: selectedUsers.map((user) => ({
-                  id: user.id,
-                  displayName: user.displayName,
-                  userPrincipalName: user.userPrincipalName,
-                  email: user.email,
-                })),
-                assignments: channels.flatMap((channel) => selectedUsers.map((user) => ({
-                  channelId: channel.id,
-                  userId: user.id,
-                  role: state.roles.get(channelRoleKey(team.id, channel.id, user.id)) || "member",
-                }))),
+                users: teamUsers.map((user) => ({ ...user })),
+                assignments: channels.flatMap((channel) =>
+                  scopeUsers.get(channel.id).map((user) => ({
+                    channelId: channel.id,
+                    userId: user.id,
+                    role:
+                      selectedRoles.get(
+                        channelRoleKey(team.id, channel.id, user.id),
+                      ) || "member",
+                  })),
+                ),
                 teamAssignments: channels.length
                   ? []
-                  : selectedUsers.map((user) => ({
+                  : scopeUsers.get("").map((user) => ({
                       userId: user.id,
-                      role: state.roles.get(teamRoleKey(team.id, user.id)) || "member",
+                      role:
+                        selectedRoles.get(teamRoleKey(team.id, user.id)) ||
+                        "member",
                     })),
                 addMissingToTeam: false,
               };
+              const units = channels.length ? channels : [null];
+              progress("Đang kiểm tra: " + team.displayName);
               try {
-                let data = await api("/api/members", { method: "POST", body: JSON.stringify(memberRequest) });
-                if (data.needsTeamConfirmation) {
-                  const missingUsers = data.missingUsers || [];
+                const checked = await requestMembers({
+                  ...base,
+                  validateOnly: true,
+                });
+                if (operation === "add" && checked.needsTeamConfirmation) {
+                  progress(
+                    "Chờ xác nhận thêm thành viên vào " + team.displayName,
+                  );
                   const accepted = await askInAppModal({
-                    title: `Thêm người vào ${team.displayName}?`,
-                    description: `${missingUsers.length} người chưa thuộc Team cha.`,
-                    warning: "Sau khi duyệt, các tài khoản này được thêm vào Team cha với quyền Member rồi mới được thêm vào private channel.",
+                    title: "Thêm người vào " + team.displayName + "?",
+                    description:
+                      checked.missingUsers.length +
+                      " người chưa thuộc Team cha.",
+                    warning:
+                      "Đồng ý sẽ thêm các tài khoản này vào Team cha với quyền Member trước khi thêm vào private channel.",
                     listLabel: "Người dùng cần thêm",
-                    items: missingUsers.map((user) => ({
-                      title: user.displayName || user.userPrincipalName || user.email || user.id,
+                    items: checked.missingUsers.map((user) => ({
+                      title:
+                        user.displayName || user.userPrincipalName || user.id,
                       subtitle: user.userPrincipalName || user.email || "",
                     })),
                     acceptText: "Thêm và tiếp tục",
-                    cancelText: "Bỏ qua team này",
+                    cancelText: "Bỏ qua Team này",
                   });
                   if (!accepted) {
-                    notify(`Đã bỏ qua Team ${team.displayName}.`, "info");
+                    units.forEach((channel) =>
+                      allResults.push({
+                        channel:
+                          team.displayName +
+                          (channel ? " / " + channel.displayName : ""),
+                        user: "—",
+                        status: "Skipped",
+                        detail:
+                          "Đã bỏ qua theo lựa chọn của bạn; chưa xử lý mục này.",
+                      }),
+                    );
                     continue;
                   }
-                  memberRequest.addMissingToTeam = true;
-                  data = await api("/api/members", { method: "POST", body: JSON.stringify(memberRequest) });
+                  base.addMissingToTeam = true;
                 }
-                const labeledResults = (data.results || []).map((result) => ({
-                  ...result,
-                  channel: `${team.displayName} / ${result.channel}`,
-                }));
-                allResults.push(...labeledResults);
-                renderResults(allResults);
-                notify(`Đã xử lý xong Team ${team.displayName}.`, "info");
+                for (const channel of units) {
+                  progress(
+                    "Đang xử lý: " +
+                      team.displayName +
+                      (channel
+                        ? " → " + channel.displayName
+                        : " → Thành viên Team"),
+                  );
+                  for (const selectedUser of scopeUsers.get(channel?.id || "")) {
+                    const role = channel
+                      ? selectedRoles.get(channelRoleKey(team.id, channel.id, selectedUser.id)) || "member"
+                      : selectedRoles.get(teamRoleKey(team.id, selectedUser.id)) || "member";
+                    progress(`Đang xử lý: ${team.displayName}${channel ? " → " + channel.displayName : ""} → ${selectedUser.displayName || selectedUser.userPrincipalName}`);
+                    try {
+                      const body = {
+                        ...base,
+                        users: [{ ...selectedUser }],
+                        assignments: channel ? base.assignments.filter((item) => item.channelId === channel.id && item.userId === selectedUser.id) : [],
+                        teamAssignments: channel ? [] : base.teamAssignments.filter((item) => item.userId === selectedUser.id),
+                      };
+                      const data = await requestMembers(body);
+                      for (const item of data.events || []) {
+                        const result = { ...item, channel: team.displayName + " / " + item.channel };
+                        allResults.push(result);
+                        notifyMemberResult(result);
+                      }
+                      if (data.needsTeamConfirmation)
+                        throw new Error(
+                          "Thành viên Team cha đã thay đổi. Hãy kiểm tra và xác nhận lại trước khi thêm.",
+                        );
+                      for (const item of data.results || []) {
+                        const result = {
+                          ...item,
+                          channel: team.displayName + " / " + item.channel,
+                          role: operation === "remove" ? null : role,
+                          trace: data.trace || [],
+                        };
+                        allResults.push(result);
+                        notifyMemberResult(result);
+                      }
+                    } catch (error) {
+                      for (const item of error.events || []) {
+                        const result = { ...item, channel: team.displayName + " / " + item.channel };
+                        allResults.push(result);
+                        notifyMemberResult(result);
+                      }
+                      const result = {
+                        channel:
+                          team.displayName +
+                          (channel ? " / " + channel.displayName : ""),
+                        user: selectedUser.userPrincipalName || selectedUser.displayName || selectedUser.id,
+                        status: "Error",
+                        detail: error.message,
+                        role: operation === "remove" ? null : role,
+                        trace: error.trace || [],
+                      };
+                      allResults.push(result);
+                      notifyMemberResult(result);
+                    }
+                  }
+                  completedUnits++;
+                  if (channel) completedChannels++;
+                  progress("Đã nhận kết quả từ server.");
+                }
               } catch (error) {
-                allResults.push({ user: "—", channel: team.displayName, status: "Error", detail: error.message });
-                renderResults(allResults);
-                notify(`Team ${team.displayName}: ${error.message}`, "error");
+                units.forEach((channel) => {
+                  const result = {
+                    channel:
+                      team.displayName +
+                      (channel ? " / " + channel.displayName : ""),
+                    user: "?",
+                    status: "Error",
+                    detail: error.message,
+                    trace: error.trace || [],
+                  };
+                  allResults.push(result);
+                  notifyMemberResult(result);
+                });
+              } finally {
+                completedTeams++;
+                progress("Tiếp tục xử lý các mục còn lại…");
               }
             }
-            const successful = allResults.filter((item) => item.status === "Added" || item.status === "Updated").length;
-            const failed = allResults.filter((item) => item.status === "Error" || item.status === "TeamAddError" || item.status === "NotInTeam").length;
-            notify(`Hoàn tất ${operations.length} team: ${successful} thành công${failed ? `, ${failed} lỗi` : ""}.`, failed ? "error" : "info");
+          } catch (error) {
+            allResults.push({
+              channel: "Tác vụ",
+              user: "—",
+              status: "Error",
+              detail: error.message,
+            });
           } finally {
             setBusy(false);
             updateSummary();
+            progress(
+              "Tác vụ đã kết thúc. Các kênh bị bỏ qua hoặc chưa chạy không tính là đã xử lý.",
+            );
+            lastResults = allResults;
+            renderResults(allResults);
+            const failed = allResults.filter(
+              (item) => resultKind(item) === "error",
+            ).length;
+            const succeeded = allResults.some((item) => resultKind(item) === "success");
+            const skipped = allResults.some((item) => resultKind(item) === "skipped" && !["AlreadyMember", "AlreadyAbsent", "Unchanged"].includes(item.status));
+            const type = failed ? (succeeded || skipped ? "warning" : "error") : skipped ? "warning" : "success";
+            notify(`${type === "warning" ? "Hoàn tất một phần" : failed ? "Xử lý thất bại" : "Hoàn tất xử lý"}: ${byId("resultTotals").textContent}`, type, allResults);
+            showResults();
+            if (operation !== "add") {
+              state.roles.clear();
+              state.memberPickerKey = "";
+              syncMemberPicker();
+            }
           }
         }
-
-        byId("addButton").addEventListener("click", async () => {
-          return runMultiTeamAdd();
-          const selectedChannels = state.channels.filter((channel) =>
-            state.selectedChannels.has(channel.id),
-          );
-          const selectedUsers = [...state.users.values()];
-          const assignmentItems = selectedChannels.flatMap((channel) =>
-            selectedUsers.map((user) => ({
-              title: channel.displayName,
-              subtitle:
-                user.displayName +
-                " · " +
-                (user.userPrincipalName || user.email),
-              badge:
-                state.roles.get(`${channel.id}|${user.id}`) === "owner"
-                  ? "Owner"
-                  : "Member",
-            })),
-          );
-          const confirmationItems = assignmentItems.length
-            ? assignmentItems
-            : selectedUsers.map((user) => ({
-                title: "Team (tất cả standard channel)",
-                subtitle:
-                  user.displayName +
-                  " · " +
-                  (user.userPrincipalName || user.email),
-                badge: state.roles.get(`team|${user.id}`) === "owner"
-                  ? "Owner"
-                  : "Member",
-              }));
-          const shouldProceed = await askInAppModal({
-            title: selectedChannels.length
-              ? "Xác nhận phân công"
-              : "Xác nhận thêm vào team",
-            description: selectedChannels.length
-              ? `${selectedUsers.length} người · ${selectedChannels.length} private channel · ${assignmentItems.length} phân công`
-              : `${selectedUsers.length} người · thêm vào team và các standard channel`,
-            warning: selectedChannels.length
-              ? "Kiểm tra danh sách, channel và quyền Member/Owner trước khi gửi. Nếu có người ngoài team cha, hệ thống sẽ hỏi xác nhận riêng sau bước kiểm tra."
-              : "Standard channel không có danh sách thành viên riêng. Người dùng chỉ cần là thành viên của team để truy cập các standard channel.",
-            listLabel: selectedChannels.length
-              ? "Channel · Người dùng · Quyền"
-              : "Team · Người dùng · Quyền",
-            items: confirmationItems,
-            acceptText: "Xác nhận thêm",
-          });
-          if (!shouldProceed) return;
-          setBusy(true);
-          setNotice("addNotice", "Đang xử lý các thành viên...", "info");
-          try {
-            const selectedChannels = state.channels.filter((channel) =>
-              state.selectedChannels.has(channel.id),
-            );
-            const selectedUsers = [...state.users.values()];
-            const memberRequest = {
-              teamId: state.teamId,
-              users: selectedUsers.map((user) => ({
-                id: user.id,
-                displayName: user.displayName,
-                userPrincipalName: user.userPrincipalName,
-                email: user.email,
-              })),
-              assignments: selectedChannels.flatMap((channel) =>
-                selectedUsers.map((user) => ({
-                  channelId: channel.id,
-                  userId: user.id,
-                  role: state.roles.get(`${channel.id}|${user.id}`) || "member",
-                })),
-              ),
-              teamAssignments: selectedChannels.length
-                ? []
-                : selectedUsers.map((user) => ({
-                    userId: user.id,
-                    role: state.roles.get(`team|${user.id}`) || "member",
-                  })),
-              addMissingToTeam: false,
-            };
-            let data = await api("/api/members", {
-              method: "POST",
-              body: JSON.stringify(memberRequest),
+        byId("addButton").addEventListener("click", () => {
+          if (state.busy || !canRunMembership()) return;
+          state.confirming = true;
+          updateClearSelectionButtons();
+          byId("addButton").disabled = true;
+          runMembershipOperation()
+            .catch((error) => notify(error.message, "error"))
+            .finally(() => {
+              state.confirming = false;
+              updateSummary();
             });
-            if (data.needsTeamConfirmation) {
-              const missingUsers = data.missingUsers || [];
-              const accepted = await askInAppModal({
-                title: "Thêm người vào team cha?",
-                description: `${missingUsers.length} người chưa là thành viên của team này.`,
-                warning: selectedChannels.length
-                  ? "Thêm vào team cha cấp quyền truy cập rộng hơn các private channel đã chọn. Đồng ý sẽ thêm họ vào team với quyền Member, sau đó tiếp tục các phân công channel."
-                  : "Đồng ý sẽ thêm họ vào team với quyền Member. Khi đó họ tự động truy cập được các standard channel.",
-                listLabel: "Người dùng cần thêm",
-                items: missingUsers.map((user) => ({
-                  title:
-                    user.displayName ||
-                    user.userPrincipalName ||
-                    user.email ||
-                    user.id,
-                  subtitle: user.userPrincipalName || user.email || "",
-                })),
-                acceptText: "Thêm vào team và tiếp tục",
-                cancelText: "Hủy thao tác",
-              });
-              if (!accepted) {
-                setNotice(
-                  "addNotice",
-                  "Đã hủy. Chưa thêm ai vào team hoặc channel.",
-                  "info",
-                );
-                return;
-              }
-              setNotice(
-                "addNotice",
-                selectedChannels.length
-                  ? "Đang thêm người vào team cha rồi tiếp tục thêm vào private channel..."
-                  : "Đang thêm người vào team và các standard channel...",
-                "info",
-              );
-              memberRequest.addMissingToTeam = true;
-              data = await api("/api/members", {
-                method: "POST",
-                body: JSON.stringify(memberRequest),
-              });
-            }
-            renderResults(data.results || []);
-            const added = (data.results || []).filter(
-              (item) => item.status === "Added",
-            ).length;
-            const updated = (data.results || []).filter(
-              (item) => item.status === "Updated",
-            ).length;
-            const teamErrors = (data.results || []).filter(
-              (item) => item.status === "TeamAddError",
-            ).length;
-            setNotice(
-              "addNotice",
-              selectedChannels.length
-                ? `Hoàn tất. Đã thêm ${added} lượt vào private channel${teamErrors ? `; ${teamErrors} lượt không thêm được vào team cha` : ""}. Xem chi tiết bên dưới.`
-                : `Hoàn tất. Đã thêm ${added} người vào team${updated ? `; cập nhật quyền ${updated} người` : ""}${teamErrors ? `; ${teamErrors} người không thêm được` : ""}. Xem chi tiết bên dưới.`,
-              teamErrors ? "error" : "info",
-            );
-          } catch (error) {
-            setNotice("addNotice", error.message, "error");
-          } finally {
-            setBusy(false);
-            updateSummary();
-          }
         });
 
         api("/api/status")
@@ -2749,7 +1892,7 @@
             byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
             byId("connectDescription").textContent =
               `Tenant: ${data.tenantId || "đã xác thực"}`;
-            byId("connectButton").textContent = "Ngắt kết nối";
+            byId("connectButtonLabel").textContent = "Ngắt kết nối";
             byId("connectButton").classList.remove("primary");
             byId("connectButton").classList.add("secondary");
             loadTeams().catch((error) =>

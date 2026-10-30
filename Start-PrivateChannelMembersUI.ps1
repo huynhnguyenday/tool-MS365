@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateRange(1024, 65535)]
     [int]$Port = 8765
@@ -49,16 +49,152 @@ function Read-JsonBody {
     }
 }
 
+function Add-MembershipTrace {
+    param($Trace, [string]$Command, [string]$Status, [string]$Detail)
+    if ($null -eq $Trace) { return }
+    $Trace.Add(@{
+        sequence = $Trace.Count + 1
+        time = [DateTimeOffset]::Now.ToString('o')
+        command = $Command
+        status = $Status
+        detail = $Detail
+    })
+}
+
+function Invoke-MembershipGraphRequest {
+    param([string]$Method, [string]$Uri, $Body, $Trace, [hashtable]$Headers = @{})
+    $parameters = @{ Method = $Method; Uri = $Uri; OutputType = 'PSObject'; Headers = $Headers }
+    # Log only the explicit membership payload, never authentication headers or context.
+    $command = "Invoke-MgGraphRequest -Method $Method -Uri '" + $Uri.Replace("'", "''") + "' -OutputType PSObject"
+    if ($null -ne $Body) {
+        $json = ConvertTo-Json -InputObject $Body -Depth 5 -Compress
+        $parameters.Body = $json
+        $parameters.ContentType = 'application/json'
+        $command += " -Body '" + $json.Replace("'", "''") + "' -ContentType 'application/json'"
+    }
+    try {
+        $response = Invoke-MgGraphRequest @parameters
+        $description = if ($Method -eq 'GET') {
+            if ($Uri -match '/channels\?') { 'Đọc danh sách kênh và kiểm tra kênh riêng thuộc Team đã chọn.' }
+            elseif ($Uri -match '/channels/.+/members') { 'Đọc danh sách thành viên kênh để kiểm tra người dùng đã có sẵn.' }
+            else { 'Đọc danh sách thành viên Team để kiểm tra tư cách thành viên và quyền hiện tại.' }
+        }
+        elseif ($Method -eq 'DELETE') { 'Gỡ thành viên khỏi phạm vi Team hoặc private channel trong URI.' }
+        elseif ($Method -eq 'PATCH') { 'Cập nhật quyền của thành viên trong phạm vi Team hoặc private channel trong URI.' }
+        elseif ($Uri -match '/channels/.+/members') { 'Thêm người dùng vào private channel với quyền trong payload.' }
+        else { 'Thêm người dùng vào Team với quyền trong payload; standard channel được kế thừa.' }
+        Add-MembershipTrace -Trace $Trace -Command $command -Status 'success' -Detail $description
+        return $response
+    }
+    catch {
+        Add-MembershipTrace -Trace $Trace -Command $command -Status 'error' -Detail (Get-GraphErrorText -ErrorRecord $_)
+        throw
+    }
+}
+
+function Get-ScopedMembershipUsers {
+    param([string]$TeamId, [string]$ChannelId)
+    $parsedTeamId = [guid]::Empty
+    if (-not [guid]::TryParse($TeamId, [ref]$parsedTeamId)) { throw 'A valid team ID is required.' }
+    $teamPath = "https://graph.microsoft.com/v1.0/teams/$(Get-GraphPathValue $TeamId)"
+    $membersUri = "$teamPath/members"
+    if ($ChannelId) {
+        $channels = @(Get-GraphPages -Uri "$teamPath/channels?`$select=id,membershipType")
+        if (-not ($channels | Where-Object { [string]$_.id -eq $ChannelId -and $_.membershipType -eq 'private' })) {
+            throw 'Select a private channel belonging to this team.'
+        }
+        $membersUri = "$teamPath/channels/$(Get-GraphPathValue $ChannelId)/members"
+    }
+    $users = foreach ($member in Get-GraphPages -Uri $membersUri) {
+        if (-not $member.userId) { continue }
+        @{
+            id = [string]$member.userId
+            membershipId = [string]$member.id
+            displayName = if ($member.displayName) { [string]$member.displayName } else { [string]$member.userId }
+            userPrincipalName = if ($member.userPrincipalName) { [string]$member.userPrincipalName } else { [string]$member.email }
+            email = [string]$member.email
+            role = if (@($member.roles) -contains 'owner') { 'owner' } else { 'member' }
+            isGuest = @($member.roles) -contains 'guest'
+        }
+    }
+    return @($users | Sort-Object @{ Expression = { [string]$_.displayName } }, @{ Expression = { [string]$_.id } })
+}
+
+function Invoke-ExistingMembershipChange {
+    param(
+        [ValidateSet('remove', 'update')][string]$Operation,
+        $Assignments, [hashtable]$MembersById, [string]$MembersUri,
+        $Users, $Trace, [string]$ScopeName
+    )
+    $results = [System.Collections.Generic.List[object]]::new()
+    foreach ($assignment in $Assignments) {
+        $userId = [string]$assignment.userId
+        $user = $Users | Where-Object { [string]$_.id -eq $userId } | Select-Object -First 1
+        $result = @{ channel = $ScopeName; user = [string]$user.userPrincipalName; status = ''; detail = '' }
+        try {
+            if (-not $MembersById.ContainsKey($userId)) {
+                $result.status = if ($Operation -eq 'remove') { 'AlreadyAbsent' } else { 'NotMember' }
+                $result.detail = if ($Operation -eq 'remove') { 'Người dùng không thuộc phạm vi này; không gửi lệnh gỡ.' } else { 'Người dùng chưa là thành viên; không thể đổi quyền và không tự động thêm.' }
+                Add-MembershipTrace -Trace $Trace -Status 'info' -Detail $result.detail
+            }
+            else {
+                $member = $MembersById[$userId]
+                $isOwner = @($member.roles) -contains 'owner'
+                $desiredOwner = [string]$assignment.role -eq 'owner'
+                if ($Operation -eq 'update' -and $isOwner -eq $desiredOwner) {
+                    $result.status = 'Unchanged'
+                    $result.detail = 'Quyền hiện tại đã đúng lựa chọn; không gửi lệnh cập nhật.'
+                    Add-MembershipTrace -Trace $Trace -Status 'info' -Detail $result.detail
+                }
+                else {
+                    if ($isOwner -and ($Operation -eq 'remove' -or -not $desiredOwner)) {
+                        $ownerCount = @($MembersById.Values | Where-Object { @($_.roles) -contains 'owner' }).Count
+                        if ($ownerCount -le 1) { throw 'Không thể gỡ hoặc hạ quyền Owner cuối cùng. Hãy chỉ định một Owner khác trước.' }
+                    }
+                    if ($Operation -eq 'update' -and $desiredOwner -and (@($member.roles) -contains 'guest')) {
+                        throw 'Không thể nâng tài khoản Guest thành Owner.'
+                    }
+                    if ([string]::IsNullOrWhiteSpace([string]$member.id)) { throw 'Microsoft Graph không trả về membership ID; chưa gửi lệnh thay đổi.' }
+                    $uri = "$MembersUri/$(Get-GraphPathValue ([string]$member.id))"
+                    if ($Operation -eq 'remove') {
+                        Invoke-MembershipGraphRequest -Method DELETE -Uri $uri -Trace $Trace | Out-Null
+                        $MembersById.Remove($userId)
+                        $result.status = 'Removed'
+                        $result.detail = 'Đã gỡ thành viên khỏi phạm vi đã chọn.'
+                    }
+                    else {
+                        $roles = [string[]]@()
+                        if ($desiredOwner) { $roles = [string[]]@('owner') }
+                        $payload = @{ '@odata.type' = '#microsoft.graph.aadUserConversationMember'; roles = $roles }
+                        Invoke-MembershipGraphRequest -Method PATCH -Uri $uri -Body $payload -Trace $Trace | Out-Null
+                        $MembersById[$userId] = @{ id = [string]$member.id; userId = $userId; roles = $roles }
+                        $result.status = 'Updated'
+                        $result.detail = "Đã cập nhật quyền thành $($assignment.role)."
+                    }
+                }
+            }
+        }
+        catch {
+            $result.status = 'Error'
+            $result.detail = Get-GraphErrorText -ErrorRecord $_
+            Add-MembershipTrace -Trace $Trace -Status 'error' -Detail $result.detail
+        }
+        $results.Add($result)
+    }
+    return $results.ToArray()
+}
+
 function Get-GraphPages {
     param(
         [Parameter(Mandatory = $true)][string]$Uri,
-        [hashtable]$Headers = @{}
+        [hashtable]$Headers = @{},
+        $Trace = $null
     )
 
     $items = [System.Collections.Generic.List[object]]::new()
     $next = $Uri
     while ($next) {
-        $page = Invoke-MgGraphRequest -Method GET -Uri $next -Headers $Headers -OutputType PSObject
+        $page = Invoke-MembershipGraphRequest -Method GET -Uri $next -Headers $Headers -Trace $Trace
         foreach ($item in $page.value) { $items.Add($item) }
         $next = $page.'@odata.nextLink'
     }
@@ -123,10 +259,14 @@ if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
 Import-Module Microsoft.Graph.Authentication
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $htmlPath = Join-Path $scriptRoot 'private-channel-members.html'
+$cssPath = Join-Path $scriptRoot 'private-channel-members.css'
 $versionPath = Join-Path $scriptRoot 'VERSION'
 $updaterPath = Join-Path $scriptRoot 'Update-TeamsChannelManager.ps1'
 if (-not (Test-Path -LiteralPath $htmlPath -PathType Leaf)) {
     throw "UI file not found: $htmlPath"
+}
+if (-not (Test-Path -LiteralPath $cssPath -PathType Leaf)) {
+    throw "UI stylesheet not found: $cssPath"
 }
 
 $listener = [System.Net.HttpListener]::new()
@@ -165,6 +305,27 @@ try {
                 continue
             }
 
+            $staticAssets = @{
+                '/toolms.ico' = @{ File = 'toolms-shortcut.ico'; ContentType = 'image/x-icon' }
+                '/favicon.ico' = @{ File = 'favicon.ico'; ContentType = 'image/x-icon' }
+                '/favicon-16.png' = @{ File = 'favicon-16.png'; ContentType = 'image/png' }
+                '/favicon-32.png' = @{ File = 'favicon-32.png'; ContentType = 'image/png' }
+                '/private-channel-members.css' = @{ File = 'private-channel-members.css'; ContentType = 'text/css; charset=utf-8' }
+                '/fontawesome.min.css' = @{ File = 'fontawesome.min.css'; ContentType = 'text/css; charset=utf-8' }
+                '/fontawesome-solid.min.css' = @{ File = 'fontawesome-solid.min.css'; ContentType = 'text/css; charset=utf-8' }
+                '/fa-solid-900.woff2' = @{ File = 'fa-solid-900.woff2'; ContentType = 'font/woff2' }
+            }
+            if ($staticAssets.ContainsKey($path) -and $method -eq 'GET') {
+                $asset = $staticAssets[$path]
+                $bytes = [System.IO.File]::ReadAllBytes((Join-Path $scriptRoot $asset.File))
+                $context.Response.ContentType = $asset.ContentType
+                $context.Response.ContentLength64 = $bytes.Length
+                $context.Response.Headers['Cache-Control'] = 'no-store'
+                $context.Response.OutputStream.Write($bytes, 0, $bytes.Length)
+                $context.Response.Close()
+                continue
+            }
+
             if ($path -notlike '/api/*') {
                 Send-JsonResponse -Context $context -StatusCode 404 -Value @{ error = 'Not found' }
                 continue
@@ -181,6 +342,7 @@ try {
                     connected = [bool]($graphContext -and $graphContext.Account)
                     account = if ($graphContext) { $graphContext.Account } else { $null }
                     tenantId = if ($graphContext) { $graphContext.TenantId } else { $null }
+                    membershipOperations = @('add', 'update', 'remove')
                 }
                 continue
             }
@@ -253,6 +415,14 @@ try {
                 continue
             }
 
+            if ($path -eq '/api/membership-users' -and $method -eq 'GET') {
+                $teamId = [string]$request.QueryString['teamId']
+                $channelId = [string]$request.QueryString['channelId']
+                $users = @(Get-ScopedMembershipUsers -TeamId $teamId -ChannelId $channelId)
+                Send-JsonResponse -Context $context -Value @{ users = $users }
+                continue
+            }
+
             if ($path -eq '/api/users' -and $method -eq 'GET') {
                 $query = [string]$request.QueryString['q']
                 if ($query.Length -lt 2) {
@@ -286,7 +456,15 @@ try {
             }
 
             if ($path -eq '/api/members' -and $method -eq 'POST') {
+                $membershipTrace = [System.Collections.Generic.List[object]]::new()
+                $membershipEvents = [System.Collections.Generic.List[object]]::new()
                 $body = Read-JsonBody -Request $request
+                $operation = [string]$body.operation
+                if (-not $operation) { $operation = 'add' }
+                if ($operation -notin @('add', 'remove', 'update')) { throw 'Unsupported membership operation.' }
+                if ($operation -ne 'add' -and -not [bool]$body.validateOnly -and ($body.confirmed -isnot [bool] -or -not $body.confirmed)) {
+                    throw 'Confirm the membership change before submitting it.'
+                }
                 $teamId = [string]$body.teamId
                 $users = @($body.users)
                 $assignments = @($body.assignments)
@@ -318,7 +496,7 @@ try {
                 $channelsById = @{}
                 if ($channelIds.Count -gt 0) {
                     $channelsUri = "https://graph.microsoft.com/v1.0/teams/$teamId/channels?`$select=id,displayName,membershipType"
-                    $availableChannels = @(Get-GraphPages -Uri $channelsUri | Where-Object { $_.membershipType -eq 'private' })
+                    $availableChannels = @(Get-GraphPages -Uri $channelsUri -Trace $membershipTrace | Where-Object { $_.membershipType -eq 'private' })
                     foreach ($channel in $availableChannels) { $channelsById[$channel.id] = $channel }
                     foreach ($channelId in $channelIds) {
                         if (-not $channelsById.ContainsKey($channelId)) { throw 'One selected channel is not a private channel in this team.' }
@@ -327,14 +505,52 @@ try {
 
                 $teamMembersUri = "https://graph.microsoft.com/v1.0/teams/$teamId/members"
                 $teamMemberIds = @{}
-                foreach ($member in Get-GraphPages -Uri $teamMembersUri) {
+                foreach ($member in Get-GraphPages -Uri $teamMembersUri -Trace $membershipTrace) {
                     if ($member.userId) { $teamMemberIds[$member.userId] = $member }
+                }
+
+                # Removal and role changes only target existing memberships.
+                # Never enter the parent-Team auto-add flow for these actions.
+                if ($operation -ne 'add') {
+                    if ([bool]$body.validateOnly) {
+                        Send-JsonResponse -Context $context -Value @{ validated = $true; results = @(); trace = $membershipTrace.ToArray() }
+                        continue
+                    }
+                    $results = [System.Collections.Generic.List[object]]::new()
+                    if (-not $isPrivateChannelFlow) {
+                        foreach ($result in @(Invoke-ExistingMembershipChange -Operation $operation -Assignments $teamAssignments -MembersById $teamMemberIds -MembersUri $teamMembersUri -Users $users -Trace $membershipTrace -ScopeName 'Team (standard channels)')) { $results.Add($result) }
+                    }
+                    else {
+                        foreach ($channelId in $channelIds) {
+                            $channelMembersUri = "https://graph.microsoft.com/v1.0/teams/$teamId/channels/$(Get-GraphPathValue $channelId)/members"
+                            $channelAssignments = @($assignments | Where-Object { [string]$_.channelId -eq $channelId })
+                            try {
+                                $membersById = @{}
+                                foreach ($member in Get-GraphPages -Uri $channelMembersUri -Trace $membershipTrace) {
+                                    if ($member.userId) { $membersById[$member.userId] = $member }
+                                }
+                                foreach ($result in @(Invoke-ExistingMembershipChange -Operation $operation -Assignments $channelAssignments -MembersById $membersById -MembersUri $channelMembersUri -Users $users -Trace $membershipTrace -ScopeName ([string]$channelsById[$channelId].displayName))) { $results.Add($result) }
+                            }
+                            catch {
+                                foreach ($assignment in $channelAssignments) {
+                                    $user = $users | Where-Object { [string]$_.id -eq [string]$assignment.userId } | Select-Object -First 1
+                                    $results.Add(@{ channel = [string]$channelsById[$channelId].displayName; user = [string]$user.userPrincipalName; status = 'Error'; detail = Get-GraphErrorText -ErrorRecord $_ })
+                                }
+                            }
+                        }
+                    }
+                    Send-JsonResponse -Context $context -Value @{ operation = $operation; results = $results.ToArray(); trace = $membershipTrace.ToArray() }
+                    continue
                 }
 
                 # Flow 1: no private channel was selected. Add or update users at
                 # team level only. Standard-channel access is inherited from team
                 # membership, and each user can be assigned Member or Owner.
                 if (-not $isPrivateChannelFlow) {
+                    if ([bool]$body.validateOnly) {
+                        Send-JsonResponse -Context $context -Value @{ validated = $true; results = @() }
+                        continue
+                    }
                     $results = [System.Collections.Generic.List[object]]::new()
                     foreach ($assignment in $teamAssignments) {
                         $userId = [string]$assignment.userId
@@ -348,13 +564,11 @@ try {
                                 $existingMember = $teamMemberIds[$userId]
                                 $isOwner = @($existingMember.roles) -contains 'owner'
                                 if (($role -eq 'owner') -eq $isOwner) {
+                                    Add-MembershipTrace -Trace $membershipTrace -Status 'info' -Detail "Người dùng đã thuộc Team với quyền $role; không gửi lệnh thêm hoặc đổi quyền."
                                     $results.Add(@{ channel = 'Team (standard channels)'; user = $upn; status = 'AlreadyMember'; detail = "Already in the team as $role." })
                                     continue
                                 }
-                                $memberId = Get-GraphPathValue ([string]$existingMember.id)
-                                $updateUri = "https://graph.microsoft.com/v1.0/teams/$teamId/members/$memberId"
-                                Invoke-MgGraphRequest -Method PATCH -Uri $updateUri -Body (@{ roles = $desiredRoles } | ConvertTo-Json -Depth 5) -ContentType 'application/json' | Out-Null
-                                $results.Add(@{ channel = 'Team (standard channels)'; user = $upn; status = 'Updated'; detail = "Team role changed to $role." })
+                                foreach ($result in @(Invoke-ExistingMembershipChange -Operation update -Assignments @($assignment) -MembersById $teamMemberIds -MembersUri $teamMembersUri -Users $users -Trace $membershipTrace -ScopeName 'Team (standard channels)')) { $results.Add($result) }
                             }
                             else {
                                 $teamMemberBody = @{
@@ -362,7 +576,7 @@ try {
                                     roles = $desiredRoles
                                     'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$userId')"
                                 }
-                                Invoke-MgGraphRequest -Method POST -Uri $teamMembersUri -Body ($teamMemberBody | ConvertTo-Json -Depth 5) -ContentType 'application/json' | Out-Null
+                                Invoke-MembershipGraphRequest -Method POST -Uri $teamMembersUri -Body $teamMemberBody -Trace $membershipTrace | Out-Null
                                 $results.Add(@{ channel = 'Team (standard channels)'; user = $upn; status = 'Added'; detail = "Added to the team as $role. Standard channels are inherited automatically." })
                             }
                         }
@@ -370,7 +584,7 @@ try {
                             $results.Add(@{ channel = 'Team (standard channels)'; user = $upn; status = 'Error'; detail = Get-GraphErrorText -ErrorRecord $_ })
                         }
                     }
-                    Send-JsonResponse -Context $context -Value @{ flow = 'team'; results = $results.ToArray() }
+                    Send-JsonResponse -Context $context -Value @{ flow = 'team'; results = $results.ToArray(); trace = $membershipTrace.ToArray() }
                     continue
                 }
 
@@ -394,6 +608,11 @@ try {
                     continue
                 }
 
+                if ([bool]$body.validateOnly) {
+                    Send-JsonResponse -Context $context -Value @{ validated = $true; results = @() }
+                    continue
+                }
+
                 $teamAddErrors = @{}
                 if ($missingTeamUsers.Count -gt 0) {
                     foreach ($user in $missingTeamUsers) {
@@ -406,9 +625,18 @@ try {
                                 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$userId')"
                             }
                             $teamMemberUri = "https://graph.microsoft.com/v1.0/teams/$teamId/members"
-                            Invoke-MgGraphRequest -Method POST -Uri $teamMemberUri -Body ($teamMemberBody | ConvertTo-Json -Depth 5) -ContentType 'application/json' | Out-Null
+                            Add-MembershipTrace -Trace $membershipTrace -Status 'info' -Detail 'Đã nhận xác nhận thêm người thiếu vào Team cha với quyền Member.'
+                            Invoke-MembershipGraphRequest -Method POST -Uri $teamMemberUri -Body $teamMemberBody -Trace $membershipTrace | Out-Null
                             $teamMemberIds[$userId] = @{ userId = $userId; roles = @() }
-                            if ($channelIds.Count -gt 0) { Start-Sleep -Seconds 2 }
+                            $membershipEvents.Add(@{
+                                channel = 'Team cha'; user = [string]$user.userPrincipalName; role = 'member'
+                                status = 'Added'; detail = 'Đã thêm vào Team cha với quyền Member sau khi xác nhận.'
+                                trace = $membershipTrace.ToArray()
+                            })
+                            if ($channelIds.Count -gt 0) {
+                                Start-Sleep -Seconds 2
+                                Add-MembershipTrace -Trace $membershipTrace -Command 'Start-Sleep -Seconds 2' -Status 'success' -Detail 'Chờ đồng bộ thành viên Team cha trước khi thêm vào private channel.'
+                            }
                         }
                         catch {
                             $teamAddErrors[$userId] = Get-GraphErrorText -ErrorRecord $_
@@ -421,7 +649,7 @@ try {
                     $channel = $channelsById[$channelId]
                     $channelMembersUri = "https://graph.microsoft.com/v1.0/teams/$teamId/channels/$(Get-GraphPathValue $channelId)/members"
                     $channelMemberIds = @{}
-                    foreach ($member in Get-GraphPages -Uri $channelMembersUri) {
+                    foreach ($member in Get-GraphPages -Uri $channelMembersUri -Trace $membershipTrace) {
                         if ($member.userId) { $channelMemberIds[$member.userId] = $true }
                     }
 
@@ -432,14 +660,17 @@ try {
                         $upn = [string]$user.userPrincipalName
                         $channelRole = [string]$assignment.role
                         if ($teamAddErrors.ContainsKey($userId)) {
+                            Add-MembershipTrace -Trace $membershipTrace -Status 'error' -Detail 'Không thêm vào kênh vì bước thêm vào Team cha thất bại.'
                             $results.Add(@{ channel = $channel.displayName; user = $upn; status = 'TeamAddError'; detail = $teamAddErrors[$userId] })
                             continue
                         }
                         if ([string]::IsNullOrWhiteSpace($userId) -or -not $teamMemberIds.ContainsKey($userId)) {
+                            Add-MembershipTrace -Trace $membershipTrace -Status 'error' -Detail 'Không thêm vào kênh vì người dùng chưa thuộc Team cha.'
                             $results.Add(@{ channel = $channel.displayName; user = $upn; status = 'NotInTeam'; detail = 'Add the person to the parent team first.' })
                             continue
                         }
                         if ($channelMemberIds.ContainsKey($userId)) {
+                            Add-MembershipTrace -Trace $membershipTrace -Status 'info' -Detail 'Người dùng đã thuộc kênh; không gửi lệnh thêm hoặc đổi quyền kênh.'
                             $results.Add(@{ channel = $channel.displayName; user = $upn; status = 'AlreadyMember'; detail = 'Already in this channel.' })
                             continue
                         }
@@ -454,7 +685,7 @@ try {
                                 'user@odata.bind' = "https://graph.microsoft.com/v1.0/users('$userId')"
                             }
                             $memberUri = "https://graph.microsoft.com/v1.0/teams/$teamId/channels/$(Get-GraphPathValue $channelId)/members"
-                            Invoke-MgGraphRequest -Method POST -Uri $memberUri -Body ($memberBody | ConvertTo-Json -Depth 5) -ContentType 'application/json' | Out-Null
+                            Invoke-MembershipGraphRequest -Method POST -Uri $memberUri -Body $memberBody -Trace $membershipTrace | Out-Null
                             $channelMemberIds[$userId] = $true
                             $result.status = 'Added'
                             $result.detail = if ($channelRole -eq 'owner') { 'Added as channel owner.' } else { 'Added as channel member.' }
@@ -467,7 +698,7 @@ try {
                     }
                 }
 
-                Send-JsonResponse -Context $context -Value @{ flow = 'privateChannels'; results = $results.ToArray() }
+                Send-JsonResponse -Context $context -Value @{ flow = 'privateChannels'; results = $results.ToArray(); trace = $membershipTrace.ToArray(); events = $membershipEvents.ToArray() }
                 continue
             }
 
@@ -476,7 +707,12 @@ try {
         catch {
             if (-not $context.Response.OutputStream.CanWrite) { continue }
             try {
-                Send-JsonResponse -Context $context -StatusCode 500 -Value @{ error = Get-GraphErrorText -ErrorRecord $_ }
+                $errorResponse = @{ error = Get-GraphErrorText -ErrorRecord $_ }
+                if ($path -eq '/api/members' -and $null -ne $membershipTrace) {
+                    $errorResponse.trace = $membershipTrace.ToArray()
+                    $errorResponse.events = $membershipEvents.ToArray()
+                }
+                Send-JsonResponse -Context $context -StatusCode 500 -Value $errorResponse
             }
             catch {
                 try { $context.Response.Close() } catch {}
