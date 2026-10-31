@@ -2,6 +2,15 @@
 
 Ghi các thay đổi đáng chú ý của từng phiên bản, mới nhất ở trên. Phiên bản chương trình nằm trong `VERSION`; máy đã cài đặt chỉ phát hiện cập nhật sau khi phiên bản mới có trên GitHub `main`.
 
+## 1.3.0 — 2026-10-31
+
+### Cải tiến
+
+- Sắp xếp lại thư mục chương trình, giao diện và tiện ích; bộ tải về chỉ gồm file chạy và tài liệu cần thiết.
+- Nhấp đúp Setup để tự tạo icon trên Desktop, kể cả OneDrive; chạy lại để sửa shortcut bị lỗi mà không tạo bản trùng.
+- Cập nhật tương thích cấu trúc mới, sao lưu file cũ và giữ dữ liệu, cấu hình cùng shortcut đã có.
+- Rút gọn hướng dẫn cài đặt, sử dụng và cập nhật.
+
 ## 1.2.0 — 2026-10-31
 
 - Thêm màn hình reset mật khẩu Microsoft 365: tải sẵn toàn bộ danh sách nhân viên theo thứ tự tên, lọc và chọn nhiều người, xác nhận danh sách và xem kết quả từng người.

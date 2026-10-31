@@ -296,9 +296,12 @@ if (-not (Get-Module -ListAvailable -Name Microsoft.Graph.Authentication)) {
 }
 
 Import-Module Microsoft.Graph.Authentication
-$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$htmlPath = Join-Path $scriptRoot 'private-channel-members.html'
-$cssPath = Join-Path $scriptRoot 'private-channel-members.css'
+$scriptRoot = Split-Path -Parent $PSScriptRoot
+$webRoot = Join-Path $PSScriptRoot 'web'
+# The updater shipped before this layout cannot retire old paths itself.
+& (Join-Path $scriptRoot 'scripts/Repair-LegacyLayout.ps1') -InstallDirectory $scriptRoot
+$htmlPath = Join-Path $webRoot 'private-channel-members.html'
+$cssPath = Join-Path $webRoot 'private-channel-members.css'
 $versionPath = Join-Path $scriptRoot 'VERSION'
 $updaterPath = Join-Path $scriptRoot 'Update-TeamsChannelManager.ps1'
 if (-not (Test-Path -LiteralPath $htmlPath -PathType Leaf)) {
@@ -315,7 +318,7 @@ try {
     $listener.Start()
 }
 catch {
-    throw "Could not start local UI at $baseUrl. The port may already be in use. Try: .\Start-PrivateChannelMembersUI.ps1 -Port 8766"
+    throw "Could not start local UI at $baseUrl. The port may already be in use. Try: .\app\Start-PrivateChannelMembersUI.ps1 -Port 8766"
 }
 
 $url = "http://127.0.0.1:$Port/"
@@ -356,7 +359,7 @@ try {
             }
             if ($staticAssets.ContainsKey($path) -and $method -eq 'GET') {
                 $asset = $staticAssets[$path]
-                $bytes = [System.IO.File]::ReadAllBytes((Join-Path $scriptRoot $asset.File))
+                $bytes = [System.IO.File]::ReadAllBytes((Join-Path $webRoot $asset.File))
                 $context.Response.ContentType = $asset.ContentType
                 $context.Response.ContentLength64 = $bytes.Length
                 $context.Response.Headers['Cache-Control'] = 'no-store'
@@ -433,7 +436,7 @@ try {
                 if (-not (Test-Path -LiteralPath $updaterPath -PathType Leaf)) { throw 'Updater script is missing.' }
                 $arguments = @(
                     '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
-                    '-File', $updaterPath, '-Apply', '-Restart',
+                    '-File', ('"' + $updaterPath + '"'), '-Apply', '-Restart',
                     '-ParentProcessId', $PID, '-Port', $Port
                 )
                 Start-Process -FilePath 'powershell.exe' -ArgumentList $arguments -WorkingDirectory $scriptRoot -WindowStyle Hidden

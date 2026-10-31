@@ -63,8 +63,9 @@ try {
     $manifestPath = Join-Path $sourceRoot.FullName 'UPDATE-MANIFEST.txt'
     if (-not (Test-Path -LiteralPath $manifestPath)) { throw 'Downloaded package is missing UPDATE-MANIFEST.txt.' }
     $files = @(Get-Content -LiteralPath $manifestPath | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
+    if (-not $files.Count -or @($files | Select-Object -Unique).Count -ne $files.Count) { throw 'Empty or duplicate update manifest.' }
     foreach ($relativePath in $files) {
-        if ([System.IO.Path]::IsPathRooted($relativePath) -or $relativePath.Contains('..')) { throw "Unsafe manifest path: $relativePath" }
+        if ([System.IO.Path]::IsPathRooted($relativePath) -or $relativePath.Contains('..') -or $relativePath -match '[:*?<>|"\x00-\x1f]' -or $relativePath -match '(^|[/\\])\.' -or $relativePath -match '(?i)\.(csv|lnk|log|pfx|p12|pem|key|cer|crt|der|bak|backup)$') { throw "Unsafe manifest path: $relativePath" }
         $source = Join-Path $sourceRoot.FullName $relativePath
         $target = Join-Path $InstallDirectory $relativePath
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Package file missing: $relativePath" }
@@ -82,13 +83,18 @@ try {
         New-Item -ItemType Directory -Path $targetDirectory -Force | Out-Null
         Copy-Item -LiteralPath $source -Destination $target -Force
     }
+    & (Join-Path $InstallDirectory 'scripts/Repair-LegacyLayout.ps1') -InstallDirectory $InstallDirectory -BackupDirectory $backupPath
     Write-Host "Updated Teams Channel Manager from $installed to $latest. Backup: $backupPath"
 }
 finally {
-    if (Test-Path -LiteralPath $tempRoot) { Remove-Item -LiteralPath $tempRoot -Recurse -Force }
+    if (Test-Path -LiteralPath $tempRoot) {
+        $resolvedTempRoot = [IO.Path]::GetFullPath($tempRoot)
+        if ([IO.Path]::GetDirectoryName($resolvedTempRoot) -ine [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\', '/') -or [IO.Path]::GetFileName($resolvedTempRoot) -notmatch '^teams-channel-update-[a-f0-9]{32}$' -or ((Get-Item -LiteralPath $resolvedTempRoot).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Unexpected updater temporary directory.' }
+        Remove-Item -LiteralPath $resolvedTempRoot -Recurse -Force
+    }
 }
 
 if ($Restart) {
-    $launcher = Join-Path $InstallDirectory 'Open-PrivateChannelMembersUI.cmd'
-    Start-Process -FilePath $launcher -ArgumentList $Port -WorkingDirectory $InstallDirectory
+    $launcher = Join-Path $InstallDirectory 'app/Start-PrivateChannelMembersUI.ps1'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoLogo', '-NoProfile', '-NoExit', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $launcher + '"'), '-Port', $Port) -WorkingDirectory $InstallDirectory -WindowStyle Hidden
 }

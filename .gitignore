@@ -38,3 +38,6 @@ Thumbs.db
 Desktop.ini
 AGENTS.md
 UXUI-AGENT.md
+
+# Local maintenance workspace (not distributed)
+.dev/
