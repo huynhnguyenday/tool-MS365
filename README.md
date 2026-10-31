@@ -2,9 +2,12 @@
 
 Ứng dụng Windows chạy cục bộ để thêm, gỡ và cập nhật quyền thành viên trong Microsoft Teams và private channel. Giao diện mở trong trình duyệt nhưng backend chỉ lắng nghe tại `127.0.0.1`; thông tin đăng nhập và Microsoft Graph token không được ghi vào repository.
 
-Phiên bản hiện tại: **1.1.1**. Xem [lịch sử phiên bản](CHANGELOG.md) để biết các thay đổi và mốc cập nhật trước đây. File lịch sử cũng có trong gói cài đặt, ở cùng thư mục với launcher.
+Phiên bản hiện tại: **1.2.0**. Xem [lịch sử phiên bản](CHANGELOG.md) để biết các thay đổi và mốc cập nhật trước đây. File lịch sử cũng có trong gói cài đặt, ở cùng thư mục với launcher.
 
 ## Chức năng
+
+- Nút **Làm lại** (mũi tên quay lại cạnh menu công cụ) đưa màn hình hiện tại về trạng thái ban đầu: xóa tìm kiếm, lựa chọn và kết quả đang hiển thị, trả các tùy chọn về mặc định. Tài khoản kết nối, lịch sử thông báo và lựa chọn ở chức năng khác được giữ nguyên; dữ liệu Microsoft 365 đã cập nhật không bị hoàn tác. Nút bị khóa trong khi đang xử lý hoặc xác nhận thao tác.
+- Địa chỉ `/#/members` mở quản lý thành viên, `/#/reset-password` mở reset mật khẩu. Tải lại trang vẫn ở đúng chức năng; lựa chọn chỉ lưu trong phiên trang và sẽ xóa khi tải lại. Có thể dùng nút quay lại/tiến tới của trình duyệt để chuyển giữa hai chức năng.
 
 - Liệt kê toàn bộ Team trong tenant dành cho Global Administrator hoặc Teams Administrator.
 - Chọn nhiều Team và giữ lựa chọn private channel khi chuyển qua lại giữa các Team.
@@ -22,6 +25,20 @@ Phiên bản hiện tại: **1.1.1**. Xem [lịch sử phiên bản](CHANGELOG.m
 - Sao lưu phiên bản cũ trước mỗi lần cập nhật.
 
 ## Yêu cầu
+
+### Reset mật khẩu nhân viên
+
+Sau khi reset, chọn **Xem chi tiết kết quả** hoặc **Xem chi tiết** trong chuông thông báo để đọc báo cáo từng người và toàn bộ lần chạy: kết quả, thời gian, lệnh Graph PATCH và tùy chọn bắt buộc đổi mật khẩu. Mật khẩu trong lệnh hiển thị được thay bằng `[REDACTED]`; báo cáo không ghi token, header xác thực hay nội dung lỗi Graph thô. Báo cáo chỉ lưu trong phiên trang. Nút **Làm lại** xóa báo cáo đang hiển thị nhưng vẫn giữ bản báo cáo trong lịch sử thông báo của phiên đó. Nếu mất kết nối trước khi nhận phản hồi, ứng dụng không thể xác nhận đầy đủ kết quả; cần kiểm tra tài khoản trước khi thử lại.
+
+Ô **Mật khẩu tạm** cho phép nhập hoặc sửa. Bản cài mới không có mật khẩu mặc định; nếu máy có cấu hình cục bộ thì ô được điền sẵn giá trị đó. Khi xác nhận, ứng dụng dùng đúng giá trị đang nhập cho những người đã chọn; không chấp nhận ô trống. Nút **Làm lại** khôi phục giá trị mặc định. Mật khẩu tùy chỉnh chỉ dùng trong yêu cầu reset, không đưa vào kết quả, thông báo hoặc file lưu trữ; Microsoft 365 vẫn kiểm tra chính sách mật khẩu của tổ chức.
+
+Nếu cần tự điền trên máy riêng, tạo file `.local/password-reset.json` trong thư mục ứng dụng với thuộc tính chuỗi `defaultPassword`. File này chứa mật khẩu riêng của máy, được giữ ngoài Git và ZIP; trình cập nhật không ghi đè nó. Không chia sẻ file này cùng gói cài đặt. Cấu hình lỗi không ngăn việc nhập mật khẩu thủ công.
+
+Trong menu công cụ, chọn **Reset mật khẩu**, danh sách toàn bộ nhân viên được tải sẵn theo thứ tự tên (A–Z); lọc bằng tên hoặc email, chọn tài khoản rồi nhấn **Cập nhật mật khẩu** và xác nhận danh sách. Mật khẩu tạm được nhập trong giao diện; checkbox **Bắt buộc đổi mật khẩu ở lần đăng nhập tiếp theo** mặc định tắt; bật nếu muốn yêu cầu nhân viên đổi mật khẩu ở lần đăng nhập tiếp theo. Nút **Làm lại** đưa tùy chọn này về tắt. Tìm kiếm lọc ngay trong danh sách đã tải; nút tải lại cập nhật danh sách từ Microsoft 365. Mỗi lần hỗ trợ tối đa 100 người, có kết quả riêng và giữ lại tài khoản chưa thành công. Kết quả chỉ nằm trong phiên giao diện.
+
+Đăng xuất rồi kết nối lại để cấp thêm quyền delegated `User-PasswordProfile.ReadWrite.All` với sự chấp thuận của quản trị viên. Tài khoản đăng nhập cần vai trò Microsoft Entra được phép reset tài khoản đích; quyền Teams Administrator riêng lẻ không đủ. Microsoft Graph áp dụng giới hạn vai trò và chính sách mật khẩu; tài khoản liên kết liên bang không hỗ trợ luồng này. Xem [tài liệu Microsoft](https://learn.microsoft.com/en-us/graph/api/user-update?view=graph-rest-1.0#example-3-update-the-passwordprofile-of-a-user-and-reset-their-password).
+
+### Môi trường và quyền Teams
 
 - Windows PowerShell 5.1 hoặc PowerShell 7.
 - Tài khoản Microsoft 365 cơ quan/trường học.
@@ -135,7 +152,7 @@ Kiểm tra hoặc cập nhật thủ công:
 1. Hoàn tất thay đổi; tăng số trong `VERSION` và thêm mục tương ứng lên đầu `CHANGELOG.md` (ngày, chức năng mới, giao diện, sửa lỗi).
 2. Chỉ đưa file chương trình/asset cần thiết vào `UPDATE-MANIFEST.txt`; không thêm CSV người dùng, shortcut sinh ra, log hoặc backup.
 3. Chạy các bài kiểm tra trong `tests/` và kiểm tra file dự định công khai bằng `.\Test-PublicFiles.ps1` từ repository Git.
-4. Tạo ZIP, rồi kiểm tra cả nội dung ZIP: `.\Test-PublicFiles.ps1 -PackagePath .\dist\TeamsChannelManager-1.1.1.zip` (đổi số theo phiên bản đang tạo).
+4. Tạo ZIP, rồi kiểm tra cả nội dung ZIP: `.\Test-PublicFiles.ps1 -PackagePath .\dist\TeamsChannelManager-1.2.0.zip` (đổi số theo phiên bản đang tạo).
 5. Review các file sẽ commit, dùng email GitHub noreply và chỉ push lên `main` khi đã được người quản lý repository cho phép. File `VERSION` trên `main` phải được tăng để máy cũ phát hiện bản mới.
 6. Sau khi bản mới có trên GitHub, chạy `.\Update-TeamsChannelManager.ps1 -CheckOnly` để xác nhận phiên bản remote.
 
@@ -146,6 +163,8 @@ Tạo ZIP phát hành:
 ```
 
 File được tạo tại `dist/TeamsChannelManager-<version>.zip`.
+
+Kiểm tra giao diện bằng Chrome với dữ liệu Graph giả lập: `node tests/browser-ui.smoke.cjs` (Node.js 22 trở lên; có thể đặt `CHROME_PATH` nếu Chrome nằm ở đường dẫn khác). Bài kiểm tra dùng trình duyệt headless và hồ sơ tạm, kiểm tra desktop/màn hình hẹp, điều hướng, lựa chọn và báo cáo reset; không kết nối tenant thật.
 
 Repository giữ thêm bài kiểm tra và công cụ/nguồn tạo favicon để bảo trì. ZIP/update chỉ chứa allowlist và CSV mẫu. `Test-PublicFiles.ps1` quét cả file đã track lẫn file mới chưa track, chặn đường dẫn riêng tư và mẫu token/email/ID không phải dữ liệu minh họa; thông báo lỗi chỉ ghi tên file và dòng, không in giá trị bí mật. Quét tự động cần đi cùng review thủ công trước khi công khai.
 

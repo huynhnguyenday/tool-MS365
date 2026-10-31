@@ -13,6 +13,8 @@ $examples = @(
     (('eyJ' + ('a' * 20)) + '.' + ('eyJ' + ('b' * 20)) + '.' + ('c' * 20)),
     ('-----BEGIN ' + 'PRIVATE KEY-----'),
     ('client_secret' + ' = "' + ('z' * 20) + '"'),
+    ('defaultPassword' + ' = "' + ('z' * 20) + '"'),
+    ('<input id="passwordValue" value="' + ('z' * 20) + '">'),
     ('private.person' + '@' + 'business.invalid'),
     (('a' * 8) + '-' + ('b' * 4) + '-' + ('c' * 4) + '-' + ('d' * 4) + '-' + ('e' * 12))
 )
@@ -22,7 +24,7 @@ foreach ($example in $examples) {
     Assert-True (-not ($findings -join ' ').Contains($example)) 'Sensitive text was printed in findings.'
 }
 Assert-True (@(Find-PublicContentIssues -Text 'sample@contoso.com user@odata.bind 11111111-1111-1111-1111-111111111111' -Path 'fixture.txt').Count -eq 0) 'Safe sample/schema content was rejected.'
-foreach ($path in @('.env', '.env.local', 'exports/result.csv', 'dist/output.zip', 'tool.lnk', 'secret.pem', '.update-backup/file.ps1', 'browser-profile-abc/Preferences', 'AGENTS.md')) {
+foreach ($path in @('.env', '.env.local', '.local/password-reset.json', 'exports/result.csv', 'dist/output.zip', 'tool.lnk', 'secret.pem', '.update-backup/file.ps1', 'browser-profile-abc/Preferences', 'AGENTS.md')) {
     Assert-True (-not (Test-PublicPath $path)) 'A machine-local or private path was accepted.'
 }
 foreach ($path in @('README.md', 'CHANGELOG.md', '.gitignore', 'bulk-channel-members.csv', 'tests/member-picker.test.cjs', 'favicon-16.png')) {

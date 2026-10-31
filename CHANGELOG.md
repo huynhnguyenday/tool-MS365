@@ -2,6 +2,15 @@
 
 Ghi các thay đổi đáng chú ý của từng phiên bản, mới nhất ở trên. Phiên bản chương trình nằm trong `VERSION`; máy đã cài đặt chỉ phát hiện cập nhật sau khi phiên bản mới có trên GitHub `main`.
 
+## 1.2.0 — 2026-10-31
+
+- Thêm màn hình reset mật khẩu Microsoft 365: tải sẵn toàn bộ danh sách nhân viên theo thứ tự tên, lọc và chọn nhiều người, xác nhận danh sách và xem kết quả từng người.
+- Cho phép sửa mật khẩu tạm và bật/tắt yêu cầu đổi mật khẩu ở lần đăng nhập tiếp theo (mặc định tắt); giữ lại tài khoản chưa reset thành công để kiểm tra.
+- Đồng bộ bố cục, checkbox và nút tìm kiếm/xóa lựa chọn giữa hai chức năng; giữ menu công cụ và chuông thông báo trên màn hình hẹp.
+- Giữ đúng chức năng đang mở khi tải lại trang; thêm nút Làm lại cạnh menu để xóa lựa chọn và kết quả của màn hình hiện tại, giữ kết nối và lịch sử thông báo.
+- Thông báo reset có báo cáo chi tiết từng người, tổng hợp thành công/lỗi và nhật ký Graph đã che mật khẩu; mở lại từ chuông thông báo hoặc nút Xem chi tiết kết quả.
+- Mật khẩu mặc định chỉ lưu trong cấu hình cục bộ, không nằm trong mã nguồn hoặc gói cài; bản cài mới yêu cầu nhập mật khẩu trước khi reset.
+
 ## 1.1.1 — 2026-10-31
 
 ### Chức năng mới

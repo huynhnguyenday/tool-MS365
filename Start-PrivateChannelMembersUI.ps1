@@ -16,6 +16,7 @@ $script:GraphScopes = @(
     'TeamMember.ReadWriteNonOwnerRole.All'
     'TeamMember.ReadWrite.All'
     'User.ReadBasic.All'
+    'User-PasswordProfile.ReadWrite.All'
 )
 
 function Send-JsonResponse {
@@ -47,6 +48,19 @@ function Read-JsonBody {
     finally {
         $reader.Dispose()
     }
+}
+
+function Get-PasswordResetSettings {
+    param([Parameter(Mandatory = $true)][string]$RootDirectory)
+    $settingsPath = Join-Path $RootDirectory '.local/password-reset.json'
+    if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) { return @{ defaultPassword = '' } }
+    try {
+        $settings = [IO.File]::ReadAllText($settingsPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+        if ($null -eq $settings.defaultPassword) { return @{ defaultPassword = '' } }
+        if ($settings.defaultPassword -isnot [string]) { throw 'Invalid local password setting.' }
+        return @{ defaultPassword = $settings.defaultPassword }
+    }
+    catch { throw 'Could not read local password settings. Check .local/password-reset.json or enter the password manually.' }
 }
 
 function Add-MembershipTrace {
@@ -368,7 +382,15 @@ try {
                     account = if ($graphContext) { $graphContext.Account } else { $null }
                     tenantId = if ($graphContext) { $graphContext.TenantId } else { $null }
                     membershipOperations = @('add', 'update', 'remove')
+                    passwordReset = $true
+                    passwordResetOptions = $true
+                    passwordResetCustomPassword = $true
                 }
+                continue
+            }
+
+            if ($path -eq '/api/password-settings' -and $method -eq 'GET') {
+                Send-JsonResponse -Context $context -Value (Get-PasswordResetSettings -RootDirectory $scriptRoot)
                 continue
             }
 
@@ -422,6 +444,53 @@ try {
 
             $graphContext = Assert-Connected
 
+            if ($path -eq '/api/password-reset' -and $method -eq 'POST') {
+                $body = Read-JsonBody -Request $request
+                $ids = @($body.userIds)
+                if ($body.password -isnot [string] -or [string]::IsNullOrWhiteSpace($body.password)) { throw 'Password must be a non-empty string.' }
+                $newPassword = $body.password
+                $forceChange = $false
+                if ($null -ne $body.forceChangePasswordNextSignIn) {
+                    if ($body.forceChangePasswordNextSignIn -isnot [bool]) { throw 'forceChangePasswordNextSignIn must be a boolean.' }
+                    $forceChange = $body.forceChangePasswordNextSignIn
+                }
+                if ($body.confirmed -isnot [bool] -or $body.confirmed -ne $true) { throw 'Password reset requires explicit confirmation.' }
+                if ($ids.Count -lt 1 -or $ids.Count -gt 100) { throw 'Select between 1 and 100 users.' }
+                foreach ($id in $ids) {
+                    if ([string]$id -notmatch '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$') { throw 'Invalid directory user ID.' }
+                }
+                if ('User-PasswordProfile.ReadWrite.All' -notin $graphContext.Scopes) { throw 'Reconnect and consent to User-PasswordProfile.ReadWrite.All before resetting passwords.' }
+                $results = @(foreach ($id in @($ids | Select-Object -Unique)) {
+                    $resetTrace = [System.Collections.Generic.List[object]]::new()
+                    $resetUri = "https://graph.microsoft.com/v1.0/users/$id"
+                    # Build the displayed command separately from the real credential payload.
+                    $redactedBody = @{ passwordProfile = @{ password = '[REDACTED]'; forceChangePasswordNextSignIn = $forceChange } } | ConvertTo-Json -Compress
+                    $resetCommand = "Invoke-MgGraphRequest -Method PATCH -Uri '$resetUri' -Body '$redactedBody' -ContentType 'application/json'"
+                    Add-MembershipTrace -Trace $resetTrace -Command $resetCommand -Status 'info' -Detail 'Gửi yêu cầu reset mật khẩu. Mật khẩu trong lệnh hiển thị đã được che; không ghi thông tin xác thực.'
+                    try {
+                        # Never pass the real payload to Invoke-MembershipGraphRequest, which logs request bodies.
+                        $payload = @{ passwordProfile = @{ password = $newPassword; forceChangePasswordNextSignIn = $forceChange } } | ConvertTo-Json -Compress
+                        Invoke-MgGraphRequest -Method PATCH -Uri $resetUri -Body $payload -ContentType 'application/json' | Out-Null
+                        $message = if ($forceChange) { 'Đã reset; yêu cầu đổi mật khẩu ở lần đăng nhập tiếp theo.' } else { 'Đã reset; không bắt buộc đổi mật khẩu ở lần đăng nhập tiếp theo.' }
+                        Add-MembershipTrace -Trace $resetTrace -Status 'success' -Detail $message
+                        @{ id = $id; success = $true; message = $message; trace = @($resetTrace.ToArray()) }
+                    }
+                    catch {
+                        # Do not return raw Graph exceptions, which can contain request details.
+                        $message = 'Không reset được. Kiểm tra vai trò quản trị, chính sách mật khẩu và loại tài khoản trong Microsoft Entra.'
+                        $statusCode = 0
+                        try { $statusCode = [int]$_.Exception.Response.StatusCode } catch {}
+                        if ($statusCode -ge 400 -and $statusCode -le 599) { $message = "Graph trả về HTTP $statusCode. $message" }
+                        Add-MembershipTrace -Trace $resetTrace -Status 'error' -Detail $message
+                        @{ id = $id; success = $false; message = $message; trace = @($resetTrace.ToArray()) }
+                    }
+                    finally { $payload = $null }
+                })
+                Send-JsonResponse -Context $context -Value @{ results = $results }
+                $newPassword = $null
+                continue
+            }
+
             if ($path -eq '/api/teams' -and $method -eq 'GET') {
                 # /me/joinedTeams only returns teams where the signed-in user is a
                 # direct member. /teams returns the tenant-wide list for supported
@@ -450,6 +519,15 @@ try {
                 $channelId = [string]$request.QueryString['channelId']
                 $users = @(Get-ScopedMembershipUsers -TeamId $teamId -ChannelId $channelId)
                 Send-JsonResponse -Context $context -Value @{ users = $users }
+                continue
+            }
+
+            if ($path -eq '/api/password-users' -and $method -eq 'GET') {
+                $usersUri = 'https://graph.microsoft.com/v1.0/users?$select=id,displayName,mail,userPrincipalName&$orderby=displayName&$top=999'
+                $users = @(Get-GraphPages -Uri $usersUri | Sort-Object displayName, userPrincipalName)
+                Send-JsonResponse -Context $context -Value @{ users = @($users | ForEach-Object {
+                    @{ id = $_.id; displayName = $_.displayName; email = $_.mail; userPrincipalName = $_.userPrincipalName }
+                }) }
                 continue
             }
 

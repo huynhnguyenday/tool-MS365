@@ -14,6 +14,7 @@
   --coral: #c85138;
   --red-bg: #fff0eb;
   --shadow: 0 14px 36px rgba(30, 62, 52, 0.08);
+  --checkbox-size: 16px;
   --page-background:
     radial-gradient(
       ellipse at 8% 0%,
@@ -82,6 +83,11 @@ button > .fa-solid + span { margin-left: 6px; }
   color: #fff;
   background: var(--green);
 }
+.panel-tools { position: absolute; top: 1px; right: 1px; z-index: 20; display: flex; gap: 8px; }
+.panel-tools .floating-menu-button { position: static; }
+.workspace-reset-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--paper); color: var(--green-dark); }
+.workspace-reset-button:hover:not(:disabled) { background: var(--mint); border-color: var(--green); }
+.workspace-reset-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .menu-icon {
   font-size: 16px;
   line-height: 1;
@@ -147,6 +153,13 @@ input,
 select,
 textarea {
   font: inherit;
+}
+input[type="checkbox"] {
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--green);
 }
 button {
   cursor: pointer;
@@ -610,7 +623,6 @@ h2 {
   background: #fff;
 }
 .team-select-row.active { background: #edf7f1; box-shadow: inset 3px 0 var(--green); }
-.team-select-row input { width: 16px; height: 16px; margin: 0; accent-color: var(--green); }
 .team-open {
   min-width: 0;
   padding: 10px 0;
@@ -696,12 +708,6 @@ h2 {
 }
 .channel-row:last-child {
   border-bottom: 0;
-}
-.channel-row input,
-.select-all input {
-  accent-color: var(--green);
-  width: 16px;
-  height: 16px;
 }
 .channel-row span {
   min-width: 0;
@@ -1273,6 +1279,7 @@ h2 {
   gap: 10px;
   align-items: stretch;
 }
+.password-list { display: grid; gap: 8px; overflow: auto; overflow-wrap: anywhere; }
 .selection-stack {
   display: grid;
   height: calc(100dvh - 24px);
@@ -1298,13 +1305,51 @@ h2 {
 }
 #teamPanel .panel-head {
   min-height: 46px;
-  padding: 10px 48px 8px 16px;
+  padding: 10px 96px 8px 16px;
 }
 #teamPanel .panel-body {
   padding-top: 0;
 }
 #teamPanel .floating-menu-button:focus-visible {
   outline-offset: -4px;
+}
+#passwordUserPanel { position: relative; display: flex; flex-direction: column; border-radius: 17px 10px 10px 10px; corner-shape: squircle; }
+#passwordUserPanel .panel-head { padding-right: 96px; }
+#passwordUserPanel .panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#passwordUserPanel .user-panel-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; flex: 1; min-height: 0; }
+#passwordUserPanel .user-search-column, #passwordUserPanel .user-selected-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+#passwordUserPanel .user-selected-column { border-left: 1px solid var(--line-strong); padding-left: 14px; }
+#passwordUserPanel .scope-field-head { margin-bottom: 8px; }
+#passwordUserPanel .user-search-row { flex: 0 0 auto; }
+#passwordUserPanel .input-wrap { flex: 1; min-width: 0; }
+#passwordUserPanel .text-input, #passwordClearSearch { height: 40px; min-height: 40px; }
+#passwordClearSearch { width: 40px; flex-shrink: 0; }
+#passwordUserPanel .text-input { padding-right: 36px; }
+#passwordUserPanel .password-picker { flex: 1; min-height: 0; overflow: auto; }
+#passwordUserPanel .member-picker-list { max-height: none; }
+#passwordSearchResults:not(:has(.member-picker-row)) { display: grid; place-items: center; text-align: center; padding: 18px; }
+#passwordUserPanel .chips { flex: 1; min-height: 0; max-height: none; overflow: auto; align-content: start; margin: 0; }
+#passwordUserPanel .chip { width: 100%; justify-content: space-between; border-radius: 7px; }
+#passwordUserPanel .chip button { min-width: 36px; min-height: 36px; flex-shrink: 0; }
+.password-person { display: block; min-width: 0; overflow-wrap: anywhere; }
+.password-person strong, .password-person small { display: block; }
+.password-person small { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.password-settings { padding: 12px; margin-bottom: 12px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--paper); }
+.password-option { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; font-size: 12px; line-height: 1.5; }
+.password-summary-user { display: flex; gap: 12px; align-items: center; padding: 10px; border-bottom: 1px solid var(--line); }
+.password-summary-user > i { width: 16px; text-align: center; color: var(--green-dark); }
+.password-workspace .assignment-table { flex: 1; min-height: 80px; overflow: auto; }
+.password-workspace .summary-body { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.password-workspace .summary-body > :not(.assignment-table) { flex-shrink: 0; }
+.password-workspace .password-list { max-height: 180px; flex-shrink: 1; }
+@media (max-width: 900px) {
+  #passwordUserPanel { min-height: 440px; }
+  #passwordUserPanel .password-picker, #passwordUserPanel .chips { max-height: 300px; }
+  .password-workspace .assignment-table { max-height: 280px; }
+}
+@media (max-width: 600px) {
+  #passwordUserPanel .user-panel-columns { grid-template-columns: 1fr; }
+  #passwordUserPanel .user-selected-column { padding-left: 0; padding-top: 12px; border-left: 0; border-top: 1px solid var(--line-strong); }
 }
 .work-grid .panel-head {
   min-height: 58px;
@@ -1495,6 +1540,7 @@ h2 {
   }
 }
 @media (max-width: 900px) {
+  .shell { padding-top: 60px; }
   .work-grid {
     grid-template-columns: 1fr;
   }
@@ -1534,7 +1580,7 @@ h2 {
 }
 @media (max-width: 620px) {
   .shell {
-    padding: 16px 14px 32px;
+    padding: 60px 14px 32px;
   }
   .connect-panel {
     width: calc(100vw - 28px);
@@ -1627,7 +1673,7 @@ h2 {
 .member-picker-row { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .member-picker-row:last-child { border-bottom: 0; }
 .member-picker-row:has(input:checked) { background: var(--mint); }
-.member-picker-row input { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; accent-color: var(--green); }
+.member-picker-row input { flex: 0 0 var(--checkbox-size); }
 .member-picker-row > span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
 .member-picker-row strong, .member-picker-row small { display: block; font-size: 12px; }
 .member-picker-row small { color: var(--muted); margin-top: 2px; }

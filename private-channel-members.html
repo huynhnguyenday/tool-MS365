@@ -89,7 +89,7 @@
               aria-pressed="false"
             >
               <i class="fa-solid fa-key" aria-hidden="true"></i> Reset mật khẩu
-              <span>Chức năng sẽ được bổ sung</span>
+              <span>Đặt lại mật khẩu nhân viên Microsoft 365</span>
             </button>
           </div>
           <div class="panel-body">
@@ -118,6 +118,8 @@
         <div class="work-grid">
           <div class="selection-stack">
             <section class="panel" id="teamPanel">
+              <div id="panelTools" class="panel-tools">
+                <button id="resetWorkspaceButton" class="workspace-reset-button" type="button" aria-label="Làm lại màn hình hiện tại" title="Làm lại màn hình hiện tại"><i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i></button>
               <button
                 id="taskbarButton"
                 class="floating-menu-button"
@@ -129,6 +131,7 @@
               >
                 <i class="fa-solid fa-bars menu-icon" aria-hidden="true"></i>
               </button>
+              </div>
               <div class="panel-head">
                 <div>
                   <div class="step-title">
@@ -521,6 +524,7 @@
         const operationLabels = { add: "Thêm thành viên", update: "Cập nhật quyền", remove: "Gỡ thành viên" };
         const setBusy = (busy) => {
           state.busy = busy;
+          byId("resetWorkspaceButton").disabled = busy || state.confirming;
           byId("connectButton").disabled = busy;
           byId("addButton").disabled = busy || !canRunMembership();
           byId("addButtonLabel").textContent = busy
@@ -549,6 +553,7 @@
 
         function updateClearSelectionButtons() {
           const locked = state.busy || state.confirming;
+          byId("resetWorkspaceButton").disabled = locked;
           byId("clearUserSelection").disabled = locked || !state.users.size;
           byId("clearTeamSelection").disabled = locked || (!state.selectedTeams.size && !state.selectedChannels.size);
         }
@@ -837,6 +842,7 @@
         }
 
         async function chooseTeam(teamId, selectTeam = true) {
+          const channelRequest = state.channelRequest = (state.channelRequest || 0) + 1;
           state.activeTeamId = teamId;
           if (selectTeam) {
             state.selectedTeams.add(teamId);
@@ -860,6 +866,7 @@
               `/api/teams/${encodeURIComponent(teamId)}/channels`,
             );
             state.channelsByTeam.set(teamId, data.channels || []);
+            if (channelRequest !== state.channelRequest || state.activeTeamId !== teamId) return;
             byId("channelFilter").disabled = false;
             if (!(data.channels || []).length) {
               byId("channelTitle").textContent = "Channels (0)";
@@ -870,6 +877,7 @@
             }
             updateSummary();
           } catch (error) {
+            if (channelRequest !== state.channelRequest || state.activeTeamId !== teamId) return;
             byId("channelTitle").textContent = "Channels";
             byId("channelList").innerHTML =
               '<div class="empty">Không tải được danh sách kênh.</div>';
@@ -1094,7 +1102,7 @@
         let displayedResults = [];
         let resultFilter = "all";
         const resultKind = (item) =>
-          ["Added", "Updated", "Removed"].includes(item.status)
+          ["Added", "Updated", "Removed", "PasswordReset"].includes(item.status)
             ? "success"
             : ["Error", "TeamAddError", "NotInTeam", "NotMember"].includes(item.status)
               ? "error"
@@ -1150,6 +1158,7 @@
             Added: "Đã thêm",
             Updated: "Đã cập nhật",
             Removed: "Đã gỡ",
+            PasswordReset: "Đã reset mật khẩu",
             AlreadyAbsent: "Không thuộc phạm vi này",
             Unchanged: "Quyền không đổi",
             NotMember: "Chưa là thành viên",
@@ -1186,7 +1195,7 @@
               )
               .join("") ||
             '<div class="empty">Không có kết quả trong nhóm này.</div>';
-          byId("viewResults").hidden = false;
+          byId("viewResults").hidden = !lastResults.length;
         }
         function showResults(results = lastResults, historical = false) {
           resultFilter = results.some(
@@ -1387,14 +1396,303 @@
         taskPanel.addEventListener("click", (event) => event.stopPropagation());
         byId("memberTaskButton").addEventListener("click", () => {
           closeTaskPanel();
+          switchPasswordTask(false);
           byId("teamPanel").querySelector("input, button")?.focus();
         });
         byId("passwordTaskButton").addEventListener("click", () => {
-          notify(
-            "Chức năng reset mật khẩu sẽ được bổ sung ở bước tiếp theo.",
-            "info",
-          );
+          closeTaskPanel();
+          switchPasswordTask(true);
         });
+
+        const passwordSelection = new Map();
+        let lastPasswordResults = [];
+        let passwordActive = false, passwordBusy = false;
+        let passwordDirectoryUsers = [], passwordDirectoryStatus = "idle", passwordDirectoryError = "", passwordDirectoryRequest = 0;
+        const membershipGrid = document.querySelector(".work-grid");
+        const passwordGrid = document.createElement("div");
+        passwordGrid.className = "work-grid password-workspace";
+        passwordGrid.hidden = true;
+        passwordGrid.innerHTML = `
+          <section class="panel" id="passwordUserPanel">
+            <div class="panel-head"><div class="step-title"><span class="step-number">01</span><h2>Chọn người dùng</h2></div>
+              <span id="passwordUserCount" class="count">0 đã chọn</span></div>
+            <div class="panel-body"><div class="user-panel-columns">
+              <section class="user-search-column" aria-labelledby="passwordSearchTitle">
+                <div class="scope-field-head"><h3 id="passwordSearchTitle" class="user-column-title">Tìm kiếm &amp; chọn</h3><span id="passwordDirectoryCount" class="scope-count" role="status"></span></div>
+                <div class="user-search-row"><div class="input-wrap">
+                  <input id="passwordSearch" class="text-input" type="search" autocomplete="off" placeholder="Nhập tên hoặc email..." aria-label="Tìm nhân viên để reset mật khẩu">
+                  <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+                </div><button id="passwordReloadUsers" type="button" class="refresh-members-button icon-button" aria-label="Tải lại danh sách nhân viên" title="Tải lại danh sách nhân viên"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button><button id="passwordClearSearch" type="button" class="clear-selection-button icon-button" aria-label="Xóa nội dung tìm kiếm" title="Xóa nội dung tìm kiếm (giữ người đã chọn)" disabled><i class="fa-solid fa-filter-circle-xmark" aria-hidden="true"></i></button></div>
+                <div class="member-picker password-picker"><div id="passwordSearchResults" class="member-picker-list" aria-live="polite"><div class="empty">Kết nối để tải danh sách nhân viên.</div></div></div>
+              </section>
+              <section class="user-selected-column" aria-labelledby="passwordSelectedTitle">
+                <div class="user-selected-head"><h3 id="passwordSelectedTitle" class="user-column-title">Người dùng đã chọn</h3>
+                  <button id="passwordClearSelection" type="button" class="clear-selection-button icon-button" aria-label="Xóa hết lựa chọn người dùng" title="Xóa hết lựa chọn người dùng" disabled><i class="fa-solid fa-eraser" aria-hidden="true"></i></button></div>
+                <div id="passwordSelected" class="chips"></div>
+              </section>
+            </div></div>
+          </section>
+          <aside class="panel summary"><div class="summary-top">
+            <div class="step-title summary-heading"><span class="step-number">02</span><h2>Reset mật khẩu</h2></div>
+            <p class="operation-hint">Kiểm tra người dùng và tùy chọn trước khi cập nhật.</p>
+            <div class="summary-counts"><div class="metric"><b id="passwordCount">0</b><span>người đã chọn</span></div></div></div>
+            <div class="summary-body"><div class="password-settings"><label class="field-label" for="passwordValue">Mật khẩu tạm</label><input id="passwordValue" class="text-input" type="text" placeholder="Nhập mật khẩu tạm..." autocomplete="off" spellcheck="false" required>
+              <label class="password-option"><input id="passwordForceChange" type="checkbox"> Bắt buộc đổi mật khẩu ở lần đăng nhập tiếp theo</label></div>
+              <div id="passwordSummary" class="assignment-table"><div class="empty summary-empty">Chọn ít nhất một người dùng để reset mật khẩu.</div></div>
+              <button id="passwordSubmit" class="primary full-width" disabled><i id="passwordSubmitIcon" class="fa-solid fa-key" aria-hidden="true"></i> <span id="passwordSubmitLabel">Cập nhật mật khẩu</span></button>
+              <button id="passwordViewResults" class="secondary full-width" type="button" hidden><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Xem chi tiết kết quả</button>
+              <div id="passwordResults" class="password-list" aria-live="polite"></div></div></aside>`;
+        membershipGrid.after(passwordGrid);
+        async function loadPasswordDefaults() {
+          try {
+            const settings = await api("/api/password-settings");
+            const input = byId("passwordValue");
+            const pristine = !input.value || input.value === input.defaultValue;
+            input.defaultValue = typeof settings.defaultPassword === "string" ? settings.defaultPassword : "";
+            if (pristine) input.value = input.defaultValue;
+          } catch (_) {
+            notify("Không tải được mật khẩu mặc định cục bộ. Bạn vẫn có thể nhập mật khẩu để reset.", "warning");
+          }
+        }
+        const taskbarHome = byId("teamPanel");
+        function switchPasswordTask(active, updateRoute = true) {
+          if (state.busy || state.confirming || passwordBusy) return;
+          if (updateRoute) {
+            const route = active ? "#/reset-password" : "#/members";
+            if (window.location.hash !== route) window.history.pushState(null, "", route);
+          }
+          passwordActive = active;
+          for (const [id, selected] of [["memberTaskButton", !active], ["passwordTaskButton", active]]) {
+            byId(id).classList.toggle("active", selected);
+            byId(id).setAttribute("aria-pressed", String(selected));
+          }
+          membershipGrid.hidden = active;
+          passwordGrid.hidden = !active;
+          (active ? byId("passwordUserPanel") : taskbarHome).prepend(byId("panelTools"));
+          if (active) {
+            byId("passwordSearch").value = "";
+            renderPasswordSearchResults();
+            loadPasswordDirectory();
+            byId("passwordSearch").focus();
+          }
+        }
+        function renderPasswordSelection(refreshSearch = true) {
+          byId("passwordCount").textContent = passwordSelection.size;
+          byId("passwordUserCount").textContent = `${passwordSelection.size} đã chọn`;
+          byId("passwordClearSelection").disabled = passwordBusy || !passwordSelection.size;
+          byId("passwordSelected").replaceChildren();
+          byId("passwordSummary").replaceChildren();
+          if (!passwordSelection.size) {
+            byId("passwordSelected").innerHTML = '<div class="empty">Chưa chọn người dùng.</div>';
+            byId("passwordSummary").innerHTML = '<div class="empty summary-empty">Chọn ít nhất một người dùng để reset mật khẩu.</div>';
+          }
+          for (const user of passwordSelection.values()) {
+            const row = document.createElement("div");
+            row.className = "chip";
+            row.innerHTML = `<span class="password-person"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || "")}</small></span>`;
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.setAttribute("aria-label", `Bỏ chọn ${user.displayName}`);
+            remove.title = `Bỏ chọn ${user.displayName}`;
+            remove.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+            remove.disabled = passwordBusy;
+            remove.onclick = () => { passwordSelection.delete(user.id); renderPasswordSelection(); };
+            row.append(remove);
+            byId("passwordSelected").append(row);
+            const summary = document.createElement("div");
+            summary.className = "password-summary-user";
+            summary.innerHTML = `<i class="fa-solid fa-user" aria-hidden="true"></i><span class="password-person"><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || "")}</small></span>`;
+            byId("passwordSummary").append(summary);
+          }
+          byId("passwordSubmit").disabled = passwordBusy || !passwordSelection.size;
+          byId("passwordViewResults").disabled = passwordBusy;
+          byId("passwordSubmitLabel").textContent = passwordBusy ? "Đang xử lý…" : "Cập nhật mật khẩu";
+          byId("passwordSubmitIcon").className = passwordBusy ? "fa-solid fa-spinner fa-spin" : "fa-solid fa-key";
+          if (refreshSearch) renderPasswordSearchResults();
+        }
+        async function loadPasswordDirectory(force = false) {
+          if (!state.connected || passwordBusy || passwordDirectoryStatus === "loading") { renderPasswordSearchResults(); return; }
+          if (!force && passwordDirectoryStatus === "ready") { renderPasswordSearchResults(); return; }
+          const request = ++passwordDirectoryRequest;
+          passwordDirectoryStatus = "loading"; passwordDirectoryError = "";
+          renderPasswordSearchResults();
+          try {
+            const data = await api("/api/password-users");
+            if (request !== passwordDirectoryRequest || !state.connected) return;
+            const collator = new Intl.Collator("vi", { sensitivity: "base", numeric: true });
+            passwordDirectoryUsers = (data.users || []).sort((a, b) => collator.compare(a.displayName || a.userPrincipalName || "", b.displayName || b.userPrincipalName || "") || collator.compare(a.userPrincipalName || "", b.userPrincipalName || ""));
+            passwordDirectoryStatus = "ready";
+          } catch (error) {
+            if (request !== passwordDirectoryRequest || !state.connected) return;
+            passwordDirectoryUsers = []; passwordDirectoryStatus = "error";
+            passwordDirectoryError = `Không tải được danh sách nhân viên: ${error.message}. Nhấn tải lại để thử lại.`;
+          }
+          if (passwordActive) renderPasswordSearchResults();
+        }
+        function clearPasswordDirectory() {
+          ++passwordDirectoryRequest;
+          passwordDirectoryUsers = []; passwordDirectoryStatus = "idle"; passwordDirectoryError = "";
+          passwordSelection.clear();
+          byId("passwordSearch").value = "";
+          byId("passwordResults").replaceChildren();
+          lastPasswordResults = [];
+          byId("passwordViewResults").hidden = true;
+          renderPasswordSelection();
+        }
+        function renderPasswordSearchResults() {
+          byId("passwordClearSearch").disabled = passwordBusy || !byId("passwordSearch").value;
+          byId("passwordReloadUsers").disabled = passwordBusy || !state.connected || passwordDirectoryStatus === "loading";
+          byId("passwordDirectoryCount").textContent = "";
+          byId("passwordSearchResults").setAttribute("aria-busy", String(passwordDirectoryStatus === "loading"));
+          if (!state.connected) { byId("passwordSearchResults").textContent = "Kết nối để tải danh sách nhân viên."; return; }
+          if (passwordDirectoryStatus === "loading") { byId("passwordSearchResults").textContent = "Đang tải danh sách nhân viên…"; return; }
+          if (passwordDirectoryStatus === "error") { byId("passwordSearchResults").textContent = passwordDirectoryError; return; }
+          const normalize = value => String(value || "").toLocaleLowerCase("vi").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
+          const query = normalize(byId("passwordSearch").value.trim());
+          const visible = passwordDirectoryUsers.filter(user => !query || [user.displayName, user.userPrincipalName, user.email].some(value => normalize(value).includes(query)));
+          byId("passwordDirectoryCount").textContent = `${visible.length} / ${passwordDirectoryUsers.length} người`;
+          if (!visible.length) { byId("passwordSearchResults").textContent = query ? "Không tìm thấy nhân viên. Thử tên khác hoặc email đầy đủ." : "Không có nhân viên trong danh sách."; return; }
+          byId("passwordSearchResults").replaceChildren();
+          for (const user of visible) {
+            const row = document.createElement("label");
+            row.className = "member-picker-row";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = passwordSelection.has(user.id);
+            checkbox.disabled = passwordBusy;
+            checkbox.onchange = () => {
+              if (passwordBusy) return;
+              if (checkbox.checked && passwordSelection.size >= 100) { checkbox.checked = false; notify("Chọn tối đa 100 người mỗi lần.", "warning"); return; }
+              if (checkbox.checked) passwordSelection.set(user.id, user);
+              else passwordSelection.delete(user.id);
+              renderPasswordSelection(false);
+            };
+            const person = document.createElement("span");
+            person.innerHTML = `<strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || "")}</small>`;
+            row.append(checkbox, person);
+            byId("passwordSearchResults").append(row);
+          }
+        }
+        byId("passwordClearSelection").onclick = () => {
+          if (passwordBusy) return;
+          passwordSelection.clear(); renderPasswordSelection();
+        };
+        byId("passwordReloadUsers").onclick = () => loadPasswordDirectory(true);
+        byId("passwordViewResults").onclick = () => {
+          if (!passwordBusy && lastPasswordResults.length) showResults(lastPasswordResults, true);
+        };
+        byId("passwordClearSearch").onclick = () => {
+          if (passwordBusy) return;
+          byId("passwordSearch").value = "";
+          byId("passwordSearch").dispatchEvent(new Event("input"));
+          byId("passwordSearch").focus();
+        };
+        byId("passwordSearch").addEventListener("input", () => {
+          if (!passwordBusy) renderPasswordSearchResults();
+        });
+        byId("passwordSubmit").onclick = async () => {
+          if (passwordBusy || state.busy || !passwordSelection.size) return;
+          const password = byId("passwordValue").value;
+          if (!password.trim()) { notify("Hãy nhập mật khẩu trước khi cập nhật.", "warning"); byId("passwordValue").focus(); return; }
+          const users = new Map(passwordSelection);
+          const forceChangePasswordNextSignIn = byId("passwordForceChange").checked;
+          passwordBusy = true;
+          setBusy(true);
+          byId("passwordSearch").disabled = true;
+          byId("passwordForceChange").disabled = true;
+          byId("passwordValue").disabled = true;
+          byId("passwordSearchResults").inert = true;
+          renderPasswordSelection();
+          try {
+            const status = await api("/api/status");
+            if (!status.connected) throw new Error("Hãy kết nối tài khoản quản trị trước khi reset mật khẩu.");
+            if (!status.passwordReset) throw new Error("Máy chủ chưa hỗ trợ reset mật khẩu. Hãy cập nhật và khởi động lại ứng dụng.");
+            if (!status.passwordResetCustomPassword) throw new Error("Máy chủ chưa hỗ trợ mật khẩu tùy chỉnh. Hãy khởi động lại ứng dụng sau khi cập nhật.");
+            if (!forceChangePasswordNextSignIn && !status.passwordResetOptions) throw new Error("Máy chủ chưa hỗ trợ tùy chọn đổi mật khẩu. Hãy khởi động lại ứng dụng sau khi cập nhật.");
+            if (!window.confirm(`Reset mật khẩu cho ${users.size} nhân viên sau?\n${[...users.values()].map(u => u.userPrincipalName || u.email || u.displayName).join("\n")}\nMật khẩu tạm: ${password}. ${forceChangePasswordNextSignIn ? "Bắt buộc" : "Không bắt buộc"} đổi ở lần đăng nhập tiếp theo.`)) return;
+            byId("passwordResults").textContent = "Đang cập nhật mật khẩu…";
+            const data = await api("/api/password-reset", { method: "POST", body: JSON.stringify({ userIds: [...users.keys()], confirmed: true, forceChangePasswordNextSignIn, password }) });
+            byId("passwordResults").replaceChildren();
+            const reports = [];
+            for (const result of data.results) {
+              const row = document.createElement("p");
+              const user = users.get(result.id);
+              row.textContent = `${user?.displayName || result.id} (${user?.userPrincipalName || user?.email || ""}): ${result.message}`;
+              byId("passwordResults").append(row);
+              const report = { channel: "Reset mật khẩu Microsoft 365", user: `${user?.displayName || result.id} (${user?.userPrincipalName || user?.email || result.id})`, status: result.success ? "PasswordReset" : "Error", detail: result.message, trace: result.trace || [] };
+              reports.push(report);
+              const commands = report.trace.filter(step => step.command).length;
+              notify(`${row.textContent} ${commands ? `Đã ghi ${commands} lệnh Graph; xem chi tiết để theo dõi.` : "Máy chủ chưa trả nhật ký Graph cho tài khoản này."}`, result.success ? "success" : "error", [report]);
+              if (result.success) passwordSelection.delete(result.id);
+            }
+            lastPasswordResults = reports;
+            byId("passwordViewResults").hidden = !reports.length;
+            const succeeded = reports.filter(report => report.status === "PasswordReset").length;
+            const failed = reports.length - succeeded;
+            if (reports.length) notify(`Hoàn tất reset mật khẩu: ${succeeded} thành công · ${failed} lỗi.`, failed ? succeeded ? "warning" : "error" : "success", reports);
+          } catch (error) {
+            byId("passwordResults").textContent = "Chưa xác định đầy đủ kết quả. Kiểm tra trạng thái tài khoản trước khi thử lại.";
+            notify(error.message, "error");
+          } finally {
+            passwordBusy = false;
+            setBusy(false);
+            byId("passwordSearch").disabled = false;
+            byId("passwordForceChange").disabled = false;
+            byId("passwordValue").disabled = false;
+            byId("passwordSearchResults").inert = false;
+            renderPasswordSelection();
+          }
+        };
+        renderPasswordSelection();
+        function resetCurrentWorkspace() {
+          if (state.busy || state.confirming || passwordBusy) return;
+          closeTaskPanel();
+          if (passwordActive) {
+            passwordSelection.clear();
+            byId("passwordSearch").value = "";
+            byId("passwordResults").replaceChildren();
+            lastPasswordResults = [];
+            byId("passwordViewResults").hidden = true;
+            byId("passwordForceChange").checked = false;
+            byId("passwordValue").value = byId("passwordValue").defaultValue;
+            renderPasswordSelection();
+            byId("passwordSearch").focus();
+          } else {
+            clearTimeout(searchTimer); clearTimeout(state.memberPickerTimer);
+            state.directoryRequest++; state.memberPickerRequest++;
+            state.channelRequest = (state.channelRequest || 0) + 1;
+            state.operation = "add";
+            state.users.clear(); state.roles.clear();
+            state.selectedTeams.clear(); state.selectedChannels.clear();
+            state.expandedChannels.clear(); state.existingMembers.clear();
+            state.memberPickerLoads = new Map();
+            state.memberPickerKey = ""; state.memberPickerStatus = "idle"; state.memberPickerError = "";
+            state.activeTeamId = "";
+            byId("membershipOperation").value = "add";
+            byId("teamSearch").value = ""; byId("userSearch").value = "";
+            byId("userSuggestions").replaceChildren();
+            byId("channelFilter").value = "all"; byId("channelFilter").disabled = true;
+            byId("selectAllChannels").checked = false; byId("selectAllChannels").indeterminate = false;
+            byId("selectAllChannels").disabled = true;
+            byId("operationProgress").hidden = true; byId("viewResults").hidden = true;
+            byId("results").replaceChildren(); lastResults = [];
+            renderTeams(); renderChannels(); renderUsers(); updateSummary();
+            byId("teamSearch").focus();
+          }
+          notify("Đã đưa màn hình hiện tại về trạng thái ban đầu.", "info");
+        }
+        byId("resetWorkspaceButton").addEventListener("click", resetCurrentWorkspace);
+        function syncWorkspaceRoute() {
+          const active = window.location.hash === "#/reset-password";
+          if (state.busy || state.confirming || passwordBusy) {
+            window.history.replaceState(null, "", passwordActive ? "#/reset-password" : "#/members");
+            return;
+          }
+          switchPasswordTask(active, false);
+          window.history.replaceState(null, "", active ? "#/reset-password" : "#/members");
+          closeTaskPanel();
+        }
+        window.addEventListener("hashchange", syncWorkspaceRoute);
 
         notificationButton.addEventListener("click", (event) => {
           event.stopPropagation();
@@ -1610,6 +1908,7 @@
               body: "{}",
             });
             state.connected = true;
+            if (passwordActive) loadPasswordDirectory();
             byId("connectionBadge").classList.add("connected");
             byId("connectionText").textContent = data.account;
             byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
@@ -1640,6 +1939,7 @@
             await api("/api/disconnect", { method: "POST", body: "{}" });
           } catch (_) {}
           state.connected = false;
+          clearPasswordDirectory();
           state.teams = [];
           state.channelsByTeam.clear();
           state.activeTeamId = "";
@@ -2029,6 +2329,7 @@
           .then((data) => {
             if (!data.connected) return;
             state.connected = true;
+            if (passwordActive) loadPasswordDirectory();
             byId("connectionBadge").classList.add("connected");
             byId("connectionText").textContent = data.account;
             byId("connectTitle").textContent = "Đã kết nối Microsoft 365";
@@ -2043,6 +2344,8 @@
           })
           .catch(() => {});
         checkForUpdates(false);
+        syncWorkspaceRoute();
+        loadPasswordDefaults();
       })();
     </script>
   </body>

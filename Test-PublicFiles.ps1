@@ -9,7 +9,8 @@ function Find-PublicContentIssues {
         'private key' = '-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----'
         'GitHub token' = '\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b'
         'JWT token' = '\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b'
-        'literal credential' = '(?i)\b(?:client[_-]?secret|access[_-]?token|refresh[_-]?token|api[_-]?key|password)\b\s*[=:]\s*["''][^"''\r\n]{8,}["'']'
+        'literal credential' = '(?i)\b(?:client[_-]?secret|access[_-]?token|refresh[_-]?token|api[_-]?key|password|newPassword|defaultPassword)\b\s*[=:]\s*["''](?!\[REDACTED\]["''])[^"''\r\n]{8,}["'']'
+        'embedded password input' = '(?i)<input\b[^>]*\bid=["'']passwordValue["''][^>]*\bvalue=["''][^"'']+["'']'
     }
     $lines = $Text -split '\r?\n'
     for ($index = 0; $index -lt $lines.Count; $index++) {
@@ -31,7 +32,7 @@ function Find-PublicContentIssues {
 function Test-PublicPath {
     param([string]$Path)
     $normalized = $Path.Replace('\', '/')
-    if ($normalized -match '(?i)(^|/)(dist|\.update-backup|\.git|\.codex|\.agents|\.auth|\.secrets|node_modules|__pycache__|.*browser.*profile[^/]*)/' -or
+    if ($normalized -match '(?i)(^|/)(dist|\.local|\.update-backup|\.git|\.codex|\.agents|\.auth|\.secrets|node_modules|__pycache__|.*browser.*profile[^/]*)/' -or
         $normalized -match '(?i)(^|/)(AGENTS\.md|UXUI-AGENT\.md|\.env(?:\..*)?|Thumbs\.db|Desktop\.ini)$' -or
         $normalized -match '(?i)\.(lnk|tmp|log|bak|backup|old|pfx|p12|pem|key|cer|crt|der|zip|7z)$') { return $false }
     if ($normalized -match '(?i)\.csv$' -and $normalized -cne 'bulk-channel-members.csv') { return $false }
