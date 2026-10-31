@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" href="/favicon-32.png?v=4" sizes="32x32" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&amp;family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;family=Google+Sans+Flex:opsz,wght@1..144,1..1000&amp;display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@1..144,1..1000&amp;display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="fontawesome.min.css" />
     <link rel="stylesheet" href="fontawesome-solid.min.css" />
     <link rel="stylesheet" href="private-channel-members.css" />
@@ -104,6 +104,9 @@
               <button id="connectButton" class="primary">
                 <i class="fa-solid fa-plug" aria-hidden="true"></i> <span id="connectButtonLabel">Kết nối tài khoản</span>
               </button>
+              <button id="releaseNotesButton" class="update-button release-notes-button" type="button" aria-haspopup="dialog">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i> Có gì mới<span id="releaseNotesDot" class="release-notes-dot" aria-label="Có phiên bản mới" hidden></span>
+              </button>
               <button id="updateButton" class="update-button" type="button">
                 <i class="fa-solid fa-cloud-arrow-down" aria-hidden="true"></i> <span id="updateButtonLabel">Phiên bản…</span>
               </button>
@@ -129,15 +132,18 @@
               <div class="panel-head">
                 <div>
                   <div class="step-title">
+                    <span class="step-number">01</span>
                     <h2>Chọn team và kênh</h2>
                   </div>
                 </div>
-                <span id="teamCount" class="count"></span>
               </div>
               <div class="panel-body">
                 <div class="team-layout">
                   <div>
-                    <label class="field-label" for="teamSearch">Tìm team</label>
+                    <div class="scope-field-head">
+                      <label class="field-label" for="teamSearch">Tìm team</label>
+                      <span id="teamCount" class="scope-count" role="status"></span>
+                    </div>
                     <div class="team-search-row">
                       <div class="input-wrap">
                         <input
@@ -194,7 +200,7 @@
               <div class="panel-head">
                 <div>
                   <div class="step-title">
-                    <span class="step-number">03</span>
+                    <span class="step-number">02</span>
                     <h2 id="userPanelTitle">Chọn người dùng</h2>
                   </div>
                 </div>
@@ -203,8 +209,12 @@
               <div class="panel-body">
                 <div class="user-panel-columns">
                   <section class="user-search-column" aria-labelledby="userSearchTitle">
-                    <h3 id="userSearchTitle" class="user-column-title">Tìm kiếm &amp; chọn</h3>
+                    <div class="scope-field-head">
+                      <h3 id="userSearchTitle" class="user-column-title">Tìm kiếm &amp; chọn</h3>
+                      <span id="memberPickerCount" class="scope-count" role="status" hidden></span>
+                    </div>
                     <div class="user-input-area">
+                      <div class="user-search-row">
                       <div class="input-wrap">
                         <input
                           id="userSearch"
@@ -216,9 +226,10 @@
                         <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
                         <div id="userSuggestions" class="suggestions"></div>
                       </div>
+                      <button id="refreshMembers" type="button" class="refresh-members-button icon-button" aria-label="Tải lại thành viên" title="Tải lại thành viên" hidden><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button>
+                      </div>
                     </div>
                     <section id="memberPicker" class="member-picker" hidden aria-label="Thành viên trong phạm vi đã chọn">
-                      <div class="member-picker-head"><span id="memberPickerCount" role="status"></span><button id="refreshMembers" type="button" class="quiet icon-button" aria-label="Tải lại thành viên" title="Tải lại thành viên"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i></button></div>
                       <div id="memberPickerList" class="member-picker-list" aria-live="polite"></div>
                     </section>
                   </section>
@@ -237,14 +248,20 @@
 
           <aside class="panel summary">
             <div class="summary-top">
-              <div class="summary-kicker">Tóm tắt thao tác</div>
-              <h2 id="summaryTitle">Sẵn sàng thêm</h2>
-              <label class="operation-label" for="membershipOperation">Thao tác thành viên</label>
-              <select id="membershipOperation" class="text-input">
-                <option value="add">Thêm thành viên</option>
+              <div class="step-title summary-heading">
+                <span class="step-number">03</span>
+                <h2 id="summaryTitle">Sẵn sàng thêm</h2>
+                <details class="summary-info">
+                  <summary aria-label="Hướng dẫn thao tác"><i class="fa-solid fa-info" aria-hidden="true"></i></summary>
+                  <p id="summaryHelp" class="summary-help-tooltip">Phân công theo Team / kênh · mặc định Member</p>
+                </details>
+              </div>
+              <select id="membershipOperation" class="text-input" aria-label="Thao tác thành viên" aria-describedby="operationHint">
+                <option value="add" selected>Thêm thành viên</option>
                 <option value="update">Cập nhật quyền</option>
                 <option value="remove">Gỡ thành viên</option>
               </select>
+              <p id="operationHint" class="operation-hint">Chọn thao tác, sau đó chọn Team / kênh và người dùng.</p>
               <div class="summary-counts">
                 <div class="metric">
                   <b id="selectedTeamCount">0</b><span>team đã chọn</span>
@@ -258,9 +275,6 @@
               </div>
             </div>
             <div class="summary-body">
-              <p id="summaryHelp" class="summary-label">
-                Phân công theo Team / kênh · mặc định Member
-              </p>
               <section
                 id="operationProgress"
                 class="operation-progress"
@@ -359,6 +373,14 @@
           Đóng &amp; làm mới
         </button>
       </footer>
+    </dialog>
+    <dialog id="releaseNotesDialog" aria-labelledby="releaseNotesTitle">
+      <header class="modal-head">
+        <h2 id="releaseNotesTitle">Các bản cập nhật &amp; tính năng</h2>
+        <button id="releaseNotesClose" class="icon-button" type="button" aria-label="Đóng lịch sử phiên bản" autofocus><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <p id="releaseNotesStatus" role="status"></p>
+      <div id="releaseNotesList" aria-busy="false"></div>
     </dialog>
     <script>
       (() => {
@@ -559,6 +581,7 @@
               teamId, channelId: channel?.id || "",
               key: channel ? `channel|${teamId}|${channel.id}` : `team|${teamId}`,
               label: `${team?.displayName || teamId} → ${channel?.displayName || "Team / Standard"}`,
+              badgeLabel: channel?.displayName || "Team / Standard",
             }));
           });
         }
@@ -591,7 +614,7 @@
             box.innerHTML = '<div class="loading">Đang tải thành viên và quyền hiện tại…</div>';
           } else {
             box.innerHTML = (state.memberPickerError ? `<div class="member-picker-error" role="alert">${escapeText(state.memberPickerError)}</div>` : "") +
-              (users.map((user) => `<label class="member-picker-row"><input type="checkbox" data-existing-user="${escapeText(user.id)}" ${state.users.has(user.id) ? "checked" : ""} ${state.memberPickerStatus !== "ready" ? "disabled" : ""}><span><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || user.id)}</small><span class="member-scope-badges">${user.memberships.map((membership) => `<span class="member-scope-badge ${membership.role === "owner" ? "owner" : ""}">${escapeText(membership.label)} · ${membership.role === "owner" ? "Owner" : membership.isGuest ? "Guest" : "Member"}</span>`).join("")}</span></span></label>`).join("") || '<div class="empty">Không có thành viên phù hợp trong phạm vi đã chọn.</div>');
+              (users.map((user) => `<label class="member-picker-row"><input type="checkbox" data-existing-user="${escapeText(user.id)}" ${state.users.has(user.id) ? "checked" : ""} ${state.memberPickerStatus !== "ready" ? "disabled" : ""}><span><strong>${escapeText(user.displayName)}</strong><small>${escapeText(user.userPrincipalName || user.email || user.id)}</small><span class="member-scope-badges">${user.memberships.map((membership) => `<span class="member-scope-badge ${membership.role === "owner" ? "owner" : ""}">${escapeText(membership.badgeLabel)} · ${membership.role === "owner" ? "Owner" : membership.isGuest ? "Guest" : "Member"}</span>`).join("")}</span></span></label>`).join("") || '<div class="empty">Không có thành viên phù hợp trong phạm vi đã chọn.</div>');
           }
           box.querySelectorAll("[data-existing-user]").forEach((input) => input.addEventListener("change", () => {
             const user = state.existingMembers.get(input.dataset.existingUser);
@@ -608,14 +631,17 @@
           byId("userPanel").classList.toggle("browsing-members", state.operation !== "add");
           byId("userPanelTitle").textContent = state.operation === "add" ? "Chọn người dùng" : "Thành viên hiện tại";
           byId("memberPicker").hidden = state.operation === "add";
+          byId("memberPickerCount").hidden = state.operation === "add";
+          byId("refreshMembers").hidden = state.operation === "add";
           byId("userSearch").placeholder = state.operation === "add" ? "Tìm người trong Microsoft 365…" : "Lọc thành viên theo tên, email, quyền…";
           byId("userSearch").disabled = !state.connected || !state.selectedTeams.size;
-          if (state.operation === "add") return;
+          if (state.operation === "add") { clearTimeout(state.memberPickerTimer); return; }
           const scopes = getMembershipScopes();
           const channelsReady = [...state.selectedTeams].every((id) => state.channelsByTeam.has(id));
           const key = JSON.stringify([state.connected, channelsReady, scopes.map((scope) => scope.key).sort()]);
           if (key === state.memberPickerKey) { renderMemberPicker(); return; }
           state.memberPickerKey = key;
+          clearTimeout(state.memberPickerTimer);
           const requestId = ++state.memberPickerRequest;
           state.memberPickerError = "";
           state.existingMembers = new Map();
@@ -626,8 +652,16 @@
           }
           state.memberPickerStatus = "loading";
           renderMemberPicker();
+          state.memberPickerTimer = setTimeout(() => {
+          if (requestId !== state.memberPickerRequest || state.operation === "add") return;
+          const loads = state.memberPickerLoads ||= new Map();
           Promise.allSettled(scopes.map(async (scope) => {
-            const data = await api(`/api/membership-users?teamId=${encodeURIComponent(scope.teamId)}${scope.channelId ? `&channelId=${encodeURIComponent(scope.channelId)}` : ""}`);
+            if (!loads.has(scope.key)) {
+              const pending = api(`/api/membership-users?teamId=${encodeURIComponent(scope.teamId)}${scope.channelId ? `&channelId=${encodeURIComponent(scope.channelId)}` : ""}`)
+                .finally(() => loads.delete(scope.key));
+              loads.set(scope.key, pending);
+            }
+            const data = await loads.get(scope.key);
             return { scope, users: data.users || [] };
           })).then((responses) => {
             if (requestId !== state.memberPickerRequest || state.operation === "add") return;
@@ -655,6 +689,7 @@
             }
             renderUsers(); updateSummary();
           });
+          }, 200);
         }
 
         function renderTeams() {
@@ -1331,10 +1366,22 @@
           renderNotifications();
           byId("closeNotifications").focus();
         };
+        function positionTaskPanel() {
+          if (!taskPanel.classList.contains("open")) return;
+          const anchor = taskbarButton.getBoundingClientRect();
+          const top = Math.max(8, Math.min(anchor.bottom + 8, window.innerHeight - 80));
+          const left = Math.max(14, Math.min(anchor.right - taskPanel.offsetWidth, window.innerWidth - taskPanel.offsetWidth - 14));
+          taskPanel.style.top = `${top}px`;
+          taskPanel.style.left = `${left}px`;
+          taskPanel.style.maxHeight = `${Math.max(0, window.innerHeight - top - 12)}px`;
+        }
+        window.addEventListener("resize", positionTaskPanel);
+        window.addEventListener("scroll", positionTaskPanel, true);
         taskbarButton.addEventListener("click", (event) => {
           event.stopPropagation();
           const open = taskPanel.classList.toggle("open");
           taskbarButton.setAttribute("aria-expanded", String(open));
+          positionTaskPanel();
           closeNotificationDrawer();
         });
         taskPanel.addEventListener("click", (event) => event.stopPropagation());
@@ -1377,6 +1424,18 @@
           renderNotifications();
         });
         document.addEventListener("click", (event) => {
+          if (!event.target.closest(".summary-info")) {
+            document.querySelector(".summary-info").open = false;
+          }
+        }, true);
+        document.addEventListener("keydown", (event) => {
+          const info = document.querySelector(".summary-info");
+          if (event.key === "Escape" && info.open) {
+            info.open = false;
+            info.querySelector("summary").focus();
+          }
+        });
+        document.addEventListener("click", (event) => {
           if (
             !event.target.closest("#connectPanel") &&
             !event.target.closest("#taskbarButton")
@@ -1384,7 +1443,7 @@
             closeTaskPanel();
         });
         document.addEventListener("keydown", (event) => {
-          if (byId("resultDialog").open) return;
+          if (byId("resultDialog").open || byId("releaseNotesDialog").open) return;
           if (notificationDrawer.classList.contains("open") && event.key === "Tab") {
             const buttons = [...notificationDrawer.querySelectorAll("button:not(:disabled)")];
             const first = buttons[0], last = buttons[buttons.length - 1];
@@ -1399,12 +1458,92 @@
           closeNotificationDrawer(true);
         });
 
+        function parseReleaseNotes(markdown) {
+          const releases = [];
+          let release, group;
+          for (const line of String(markdown || "").split(/\r?\n/)) {
+            const heading = line.match(/^##\s+v?(\d+\.\d+\.\d+)(?:\s+[—–-]\s+(.+))?\s*$/);
+            if (heading) {
+              const date = (heading[2] || "").trim();
+              release = { version: heading[1], date, pending: /^Chưa phát hành$/i.test(date), groups: [] };
+              releases.push(release); group = null;
+            } else if (/^##\s/.test(line)) { release = null; group = null; }
+            else if (release && /^###\s+/.test(line)) {
+              group = { title: line.replace(/^###\s+/, "").trim(), items: [] };
+              release.groups.push(group);
+            } else if (release && /^\s*[-*]\s+/.test(line)) {
+              if (!group) { group = { title: "Thay đổi nổi bật", items: [] }; release.groups.push(group); }
+              group.items.push(line.replace(/^\s*[-*]\s+/, ""));
+            } else if (release && group?.items.length && /^\s{2,}\S/.test(line)) {
+              group.items[group.items.length - 1] += ` ${line.trim()}`;
+            }
+          }
+          return releases;
+        }
+        function compareReleaseVersions(a, b) {
+          const left = a.split(".").map(Number), right = b.split(".").map(Number);
+          for (let i = 0; i < 3; i++) if (left[i] !== right[i]) return left[i] - right[i];
+          return 0;
+        }
+        function releaseNotesMarkup(data) {
+          const releases = new Map();
+          for (const release of parseReleaseNotes(data.remoteMarkdown)) releases.set(release.version, release);
+          for (const release of parseReleaseNotes(data.localMarkdown)) releases.set(release.version, release);
+          const sorted = [...releases.values()].sort((a, b) => compareReleaseVersions(b.version, a.version));
+          if (!sorted.length) return '<div class="empty">Chưa có lịch sử phiên bản để hiển thị.</div>';
+          const inline = text => escapeText(text).replace(/`([^`]+)`/g, '<code>$1</code>');
+          return sorted.map((release, index) => {
+            const current = !release.pending && release.version === data.currentVersion;
+            const newer = !release.pending && compareReleaseVersions(release.version, data.currentVersion) > 0;
+            const badge = release.pending ? "Sắp phát hành" : current ? "Đang sử dụng" : newer ? "Bản mới" : "Bản trước";
+            return `<details class="release-card ${current ? "current" : ""}" ${index === 0 || current ? "open" : ""}><summary><span><strong>v${escapeText(release.version)}</strong><span class="release-date">${escapeText(release.date)}</span></span><span class="release-badge ${newer ? "new" : ""}">${badge}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><div class="release-card-body">${release.groups.map(group => `<section><h3>${escapeText(group.title)}</h3><ul>${group.items.map(item => `<li>${inline(item)}</li>`).join("")}</ul></section>`).join("") || '<p>Chưa có ghi chú chi tiết cho phiên bản này.</p>'}</div></details>`;
+          }).join("");
+        }
+        let releaseUpdateAvailable = false, releaseNotesRequest = 0;
+        async function openReleaseNotes() {
+          closeTaskPanel();
+          const dialog = byId("releaseNotesDialog");
+          if (dialog.open) return;
+          dialog.showModal();
+          const requestId = ++releaseNotesRequest;
+          const list = byId("releaseNotesList"), status = byId("releaseNotesStatus");
+          list.innerHTML = ''; list.setAttribute("aria-busy", "true");
+          status.textContent = "Đang đọc lịch sử phiên bản…";
+          try {
+            const local = await api("/api/release-notes", { cache: "no-store" });
+            if (requestId !== releaseNotesRequest || !dialog.open) return;
+            list.innerHTML = releaseNotesMarkup(local);
+            status.textContent = local.warning || `Đang sử dụng v${local.currentVersion} · Lịch sử trong bản cài đặt`;
+            if (releaseUpdateAvailable) {
+              status.textContent = `Đang sử dụng v${local.currentVersion} · Đang tải ghi chú bản mới…`;
+              const remote = await api("/api/release-notes?remote=1", { cache: "no-store" });
+              if (requestId !== releaseNotesRequest || !dialog.open) return;
+              list.innerHTML = releaseNotesMarkup(remote);
+              status.textContent = remote.warning || `Đang sử dụng v${remote.currentVersion} · Đã kiểm tra ghi chú trên GitHub`;
+            }
+          } catch (error) {
+            if (requestId === releaseNotesRequest && dialog.open) status.textContent = `Không thể đọc thêm lịch sử phiên bản: ${error.message}. Bạn có thể đọc file CHANGELOG.md trong thư mục ứng dụng.`;
+          } finally {
+            if (requestId === releaseNotesRequest) list.setAttribute("aria-busy", "false");
+          }
+        }
+        byId("releaseNotesButton").addEventListener("click", openReleaseNotes);
+        byId("releaseNotesClose").addEventListener("click", () => byId("releaseNotesDialog").close());
+        byId("releaseNotesDialog").addEventListener("close", () => { releaseNotesRequest++; taskbarButton.focus(); });
+        byId("releaseNotesDialog").addEventListener("click", event => {
+          if (event.target !== byId("releaseNotesDialog")) return;
+          const rect = event.target.getBoundingClientRect();
+          if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close();
+        });
+
         async function checkForUpdates(showCurrentToast = true) {
           const button = byId("updateButton");
           button.disabled = true;
           byId("updateButtonLabel").textContent = "Đang kiểm tra…";
           try {
             const status = await api("/api/update/status");
+            releaseUpdateAvailable = Boolean(status.updateAvailable);
+            byId("releaseNotesDot").hidden = !releaseUpdateAvailable;
             byId("updateButtonLabel").textContent = `v${status.currentVersion}`;
             button.classList.toggle(
               "available",
@@ -1581,6 +1720,7 @@
           state.operation = byId("membershipOperation").value;
           state.users.clear(); state.roles.clear();
           state.existingMembers.clear(); state.memberPickerKey = "";
+          state.memberPickerLoads = new Map();
           state.memberPickerRequest++; state.directoryRequest++;
           byId("userSearch").value = "";
           byId("userSuggestions").innerHTML = "";
@@ -1590,6 +1730,7 @@
         byId("refreshMembers").addEventListener("click", () => {
           if (state.busy) return;
           state.memberPickerKey = "";
+          state.memberPickerLoads = new Map();
           updateSummary();
         });
 
@@ -1866,6 +2007,7 @@
             if (operation !== "add") {
               state.roles.clear();
               state.memberPickerKey = "";
+              state.memberPickerLoads = new Map();
               syncMemberPicker();
             }
           }

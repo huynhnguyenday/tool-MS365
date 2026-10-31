@@ -31,6 +31,7 @@ async function main() {
   const member = { id: 'u1', displayName: 'Sample Member', email: 'member@contoso.com', role: 'member' };
   const owner = { id: 'u2', displayName: 'Sample Owner', email: 'owner@contoso.com', role: 'owner' };
   const context = {
+    setTimeout: callback => setImmediate(callback), clearTimeout: clearImmediate,
     state, byId, escapeText, channelKey: (t, c) => `${t}|${c}`, renderUsers() {}, updateSummary() { context.render(); },
     api: async url => { calls.push(url); return { users: [member, owner] }; },
   };
@@ -78,7 +79,7 @@ async function main() {
     if (url.includes('channelId=c1')) return new Promise(resolve => { resolveOld = resolve; });
     return { users: [member] };
   };
-  state.selectedChannels = new Set(['t1|c1']); context.sync();
+  state.selectedChannels = new Set(['t1|c1']); context.sync(); await tick();
   state.selectedChannels = new Set(['t1|c2']); context.sync(); await tick();
   resolveOld({ users: [owner] }); await tick();
   assert(state.existingMembers.has('u1'));
@@ -111,6 +112,30 @@ async function main() {
   byId('userSuggestions').innerHTML = ''; // Mode-change handler clears directory suggestions.
   resolveDirectory({ users: [owner] }); await pendingSearch;
   assert.equal(byId('userSuggestions').innerHTML, '');
+  // Rapid scope changes only start the final request, and overlapping loads share a request.
+  state.operation = 'update'; state.memberPickerKey = '';
+  const loadCalls = [];
+  let finishFirst;
+  context.api = async url => {
+    loadCalls.push(url);
+    if (url.includes('channelId=c1')) return new Promise(resolve => { finishFirst = resolve; });
+    return { users: [member] };
+  };
+  state.selectedChannels = new Set(['t1|c1']); context.sync();
+  state.selectedChannels = new Set(['t1|c2']); context.sync(); await tick();
+  assert.equal(loadCalls.length, 1);
+  assert(loadCalls[0].includes('channelId=c2'));
+  state.selectedChannels = new Set(['t1|c1']); context.sync(); await tick();
+  state.selectedChannels.add('t1|c2'); context.sync(); await tick();
+  assert.equal(loadCalls.filter(url => url.includes('channelId=c1')).length, 1);
+  assert.equal(state.memberPickerStatus, 'loading');
+  assert(!context.canRun());
+  finishFirst({ users: [owner] }); await tick();
+  assert.equal(state.memberPickerStatus, 'ready');
+  assert.equal(state.existingMembers.get('u2').memberships[0].badgeLabel, 'Channel1');
+  assert(byId('memberPickerList').innerHTML.includes('Channel1 · Owner'));
+  assert(!byId('memberPickerList').innerHTML.includes('Team1 →'));
+  console.log('PASS: rapid scope changes are coalesced; overlapping scopes share in-flight loads; badges omit Team names.');
   console.log('PASS: scoped member loading, current-role selection, local filtering, no directory fallback, multi-channel roles, stale-response protection, selection pruning, partial failures and add-only directory search.');
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -2,7 +2,7 @@
 
 Ứng dụng Windows chạy cục bộ để thêm, gỡ và cập nhật quyền thành viên trong Microsoft Teams và private channel. Giao diện mở trong trình duyệt nhưng backend chỉ lắng nghe tại `127.0.0.1`; thông tin đăng nhập và Microsoft Graph token không được ghi vào repository.
 
-Phiên bản hiện tại: **1.1.0**. Xem [lịch sử phiên bản](CHANGELOG.md) để biết các thay đổi và mốc cập nhật trước đây. File lịch sử cũng có trong gói cài đặt, ở cùng thư mục với launcher.
+Phiên bản hiện tại: **1.1.1**. Xem [lịch sử phiên bản](CHANGELOG.md) để biết các thay đổi và mốc cập nhật trước đây. File lịch sử cũng có trong gói cài đặt, ở cùng thư mục với launcher.
 
 ## Chức năng
 
@@ -13,6 +13,7 @@ Phiên bản hiện tại: **1.1.0**. Xem [lịch sử phiên bản](CHANGELOG.m
 - Gỡ thành viên hoặc cập nhật quyền Member/Owner tại cấp Team hoặc private channel. Hai thao tác này chỉ xử lý thành viên hiện có, không tự thêm người vào Team/kênh.
 - Phân công dạng cây `Team → Channel → Người dùng → Quyền`.
 - Menu công cụ chứa kết nối và cập nhật phiên bản; biểu tượng chuông mở lịch sử thông báo.
+- Chọn **Có gì mới** trong menu công cụ để đọc lịch sử cập nhật, kể cả khi offline. Bản đang dùng có nhãn riêng; bản dự kiến được ghi **Sắp phát hành**. Khi phát hiện cập nhật, popup tải thêm ghi chú GitHub và giữ lịch sử cục bộ nếu mạng lỗi.
 - Thông báo phân biệt thành công, cảnh báo, lỗi và thông tin; lưu tối đa 100 mục trong phiên hiện tại. Thông báo giống nhau liên tiếp trong 30 giây được gộp lại. Mở chuông để đánh dấu đã đọc; tải lại trang sẽ xóa lịch sử.
 - Chọn **Xem chi tiết** trong thông báo kết quả để mở báo cáo của đúng lần chạy đó trên modal có nền mờ. Đóng báo cáo để quay lại lịch sử. Toast có nút đóng, tự ẩn sau 4,2 giây (cảnh báo 7 giây, lỗi 10 giây) và tạm dừng khi rê chuột hoặc đặt focus vào toast.
 - Khi thêm thành viên, ứng dụng xử lý lần lượt từng người trong từng Team/kênh và ghi thông báo kết quả sau mỗi yêu cầu. Nút **Xem chi tiết** ở góc dưới phải mở nhật ký lệnh thực tế theo thứ tự: đọc danh sách, kiểm tra thành viên, thêm vào Team cha nếu đã xác nhận, chờ đồng bộ và thêm vào private channel hoặc cập nhật quyền Team. Mỗi lệnh có thời gian, kết quả và lỗi Graph nếu có; người đã thuộc kênh sẽ được bỏ qua mà không gửi lệnh thêm/đổi quyền kênh.
@@ -134,7 +135,7 @@ Kiểm tra hoặc cập nhật thủ công:
 1. Hoàn tất thay đổi; tăng số trong `VERSION` và thêm mục tương ứng lên đầu `CHANGELOG.md` (ngày, chức năng mới, giao diện, sửa lỗi).
 2. Chỉ đưa file chương trình/asset cần thiết vào `UPDATE-MANIFEST.txt`; không thêm CSV người dùng, shortcut sinh ra, log hoặc backup.
 3. Chạy các bài kiểm tra trong `tests/` và kiểm tra file dự định công khai bằng `.\Test-PublicFiles.ps1` từ repository Git.
-4. Tạo ZIP, rồi kiểm tra cả nội dung ZIP: `.\Test-PublicFiles.ps1 -PackagePath .\dist\TeamsChannelManager-1.1.0.zip` (đổi số theo phiên bản đang tạo).
+4. Tạo ZIP, rồi kiểm tra cả nội dung ZIP: `.\Test-PublicFiles.ps1 -PackagePath .\dist\TeamsChannelManager-1.1.1.zip` (đổi số theo phiên bản đang tạo).
 5. Review các file sẽ commit, dùng email GitHub noreply và chỉ push lên `main` khi đã được người quản lý repository cho phép. File `VERSION` trên `main` phải được tăng để máy cũ phát hiện bản mới.
 6. Sau khi bản mới có trên GitHub, chạy `.\Update-TeamsChannelManager.ps1 -CheckOnly` để xác nhận phiên bản remote.
 

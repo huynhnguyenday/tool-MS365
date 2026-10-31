@@ -92,6 +92,31 @@ function Invoke-MembershipGraphRequest {
     }
 }
 
+function Get-ReleaseNotes {
+    param([string]$RootDirectory, [switch]$IncludeRemote)
+    $notes = @{
+        currentVersion = ([IO.File]::ReadAllText((Join-Path $RootDirectory 'VERSION'))).Trim()
+        localMarkdown = ''
+        remoteMarkdown = ''
+        warning = ''
+    }
+    $localPath = Join-Path $RootDirectory 'CHANGELOG.md'
+    if (Test-Path -LiteralPath $localPath -PathType Leaf) {
+        $notes.localMarkdown = [IO.File]::ReadAllText($localPath, [Text.Encoding]::UTF8)
+    }
+    else { $notes.warning = 'Không tìm thấy lịch sử phiên bản trong bản cài đặt.' }
+    if ($IncludeRemote) {
+        try {
+            $uri = 'https://raw.githubusercontent.com/huynhnguyenday/tool-MS365/main/CHANGELOG.md'
+            $remote = [string](Invoke-RestMethod -Uri $uri -TimeoutSec 8 -Headers @{ 'User-Agent' = 'TeamsChannelManager-ReleaseNotes' })
+            if ($remote.Length -gt 1048576) { throw 'Release notes exceed the supported size.' }
+            $notes.remoteMarkdown = $remote
+        }
+        catch { $notes.warning = 'Chưa tải được ghi chú bản mới từ GitHub. Lịch sử trong bản cài đặt vẫn có thể đọc bên dưới.' }
+    }
+    return $notes
+}
+
 function Get-ScopedMembershipUsers {
     param([string]$TeamId, [string]$ChannelId)
     $parsedTeamId = [guid]::Empty
@@ -366,6 +391,11 @@ try {
                 Disconnect-MgGraph | Out-Null
                 $script:GraphConnected = $false
                 Send-JsonResponse -Context $context -Value @{ connected = $false }
+                continue
+            }
+
+            if ($path -eq '/api/release-notes' -and $method -eq 'GET') {
+                Send-JsonResponse -Context $context -Value (Get-ReleaseNotes -RootDirectory $scriptRoot -IncludeRemote:($request.QueryString['remote'] -eq '1'))
                 continue
             }
 

@@ -2,38 +2,31 @@
 
 Ghi các thay đổi đáng chú ý của từng phiên bản, mới nhất ở trên. Phiên bản chương trình nằm trong `VERSION`; máy đã cài đặt chỉ phát hiện cập nhật sau khi phiên bản mới có trên GitHub `main`.
 
-## 1.1.0 — 2026-10-31
+## 1.1.1 — 2026-10-31
 
 ### Chức năng mới
 
-- Gỡ thành viên hoặc cập nhật quyền Member/Owner tại cấp Team và private channel.
-- Khi gỡ/đổi quyền, tự tải thành viên và quyền hiện tại theo phạm vi đã chọn; ô tìm kiếm lọc danh sách này. Chế độ thêm vẫn tìm người trong Microsoft 365.
-- Với nhiều phạm vi, hiển thị quyền riêng ở từng Team/kênh và chỉ xử lý những phạm vi người được chọn đang thuộc.
-- Chặn gỡ/hạ quyền Owner cuối cùng, nâng Guest thành Owner và gửi thao tác mới tới server chưa hỗ trợ.
-- Nhật ký lệnh Graph theo thứ tự cho từng người, gồm kiểm tra thành viên, thêm vào Team cha sau xác nhận, chờ đồng bộ, thêm/gỡ/đổi quyền và lỗi thực thi.
+- Thêm **Có gì mới** để xem lịch sử cập nhật, đọc được cả khi offline.
 
-### Giao diện và thông báo
+### Cải tiến giao diện
 
-- Làm mới bố cục, tách CSS khỏi HTML và giữ khả năng dùng trên màn hình nhỏ.
-- Khung người dùng chia hai cột 50/50: tìm kiếm/chọn và người đã chọn, cuộn riêng.
-- Thêm nút xóa toàn bộ lựa chọn người dùng và Team/kênh; màu xám khi chưa chọn, đỏ khi có thể dùng.
-- Dùng Font Awesome Free cục bộ; Google Sans Flex cho tiêu đề, DM Sans cho nội dung và Bricolage Grotesque cho nhãn tóm tắt, có font dự phòng.
-- Mở rộng bảng thông báo, làm rõ viền/màu thành công, cảnh báo và lỗi; sửa đếm chưa đọc, gộp mục lặp và giới hạn toast.
-- Báo kết quả từng người khi hoàn tất. Nút Xem chi tiết mở modal trên nền mờ, giữ đúng báo cáo của từng lần chạy.
-- Bổ sung tiến độ xử lý, lọc kết quả và thao tác bàn phím trong hộp xác nhận/thông báo.
+- Đồng bộ font Google Sans Flex, chia đều hai khung Team/người dùng và thu gọn bố cục.
+- Làm rõ bộ lọc, checkbox, menu công cụ và các nút thông báo.
+- Rút gọn nhãn thành viên; chuyển hướng dẫn vào nút thông tin cạnh tiêu đề.
 
-### Icon và favicon
+### Cải tiến tải dữ liệu
 
-- Thêm icon riêng cho shortcut Windows, công cụ tạo `.lnk` và hướng dẫn đổi icon của shortcut đã đặt tên.
-- Tạo favicon riêng cho tab: PNG 16/32 px và ICO 16/32/48 px, cập nhật URL để tránh cache cũ.
-- Sửa lỗi xuất ảnh gây răng cưa bằng bộ thu ảnh theo diện tích, xử lý alpha; có kiểm tra hồi quy cho cạnh chéo và viền trong suốt.
-- Gộp icon shortcut vào `toolms-shortcut.ico`, bỏ file ảnh trùng `toolms.ico`; giữ URL web cũ làm alias. Shortcut cũ trỏ trực tiếp tới file ảnh cũ cần chọn lại icon theo README.
+- Giảm tải trùng danh sách thành viên khi chọn nhiều kênh.
+- Rút gọn ghi chú cập nhật; đọc lại changelog mỗi lần mở Có gì mới.
 
-### Bảo trì và phát hành
+## 1.1.0 — 2026-10-31
 
-- Thêm lịch sử phiên bản này vào gói cập nhật và liên kết trong README.
-- Giữ bài kiểm tra và nguồn thiết kế trong repository; gói cài đặt chỉ gồm file trong allowlist và CSV mẫu.
-- Dọn file thử nghiệm; mở rộng loại trừ dữ liệu máy cục bộ, shortcut, log, CSV thật và thông tin xác thực.
+- Thêm gỡ thành viên và đổi quyền Member/Owner tại Team, private channel.
+- Tải thành viên hiện có, hiển thị quyền theo từng Team/kênh.
+- Chặn gỡ Owner cuối cùng và nâng Guest thành Owner.
+- Bổ sung báo cáo kết quả, tiến độ và nhật ký xử lý từng người.
+- Cải tiến giao diện chọn người dùng, thông báo và nút xóa lựa chọn.
+- Thêm icon ứng dụng, favicon và lịch sử phiên bản trong gói cài đặt.
 
 ## 1.0.3 — 2026-10-29
 
